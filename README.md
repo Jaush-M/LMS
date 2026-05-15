@@ -1,6 +1,6 @@
 # Learning Mangement System
 
-A web-based Learning Management System. Students and educators interact through the LMS, administrators manage enrolment and attendance through the SMS, and all authentication is centralised through the SSO identity provider.
+A web-based Learning Management System. Students and educators interact through the LMS.
 
 | Name                     | Student ID |
 | ------------------------ | ---------- |
