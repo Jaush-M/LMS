@@ -10,7 +10,7 @@ Build a full web-based Learning Management System for a Villa College-style acad
 
 - **Student**: accesses learning materials, assignments, submissions, attendance, grades, calendar, announcements, notifications, feedback, and module group chats.
 - **Educator**: manages assigned module offerings, content, assignments, marking, offline assessment marks, attendance, module events, announcements, feedback reports, and module group chats.
-- **Administrator**: manages academic setup, enrolment, calendars, class sessions, moderation, operational audit records, reports, and student/educator accounts.
+- **Administrator**: manages academic setup, enrollment, calendars, class sessions, moderation, operational audit records, reports, and student/educator accounts.
 - **Super Administrator**: manages administrators, system settings, system-level audit records, and has full oversight.
 
 ## Technology Decisions
@@ -107,7 +107,7 @@ All upload categories allow any file type.
 - FR-034: Learning hours may be derived as `credits x 10`.
 - FR-035: Academic Levels should warn, not block, when total credits differ from the expected full-time target around `120 credits`.
 - FR-036: Prerequisites must point to Template Modules inside the same Curriculum Template.
-- FR-037: Prerequisite and progression checks must warn Administrators, not block enrolment.
+- FR-037: Prerequisite and progression checks must warn Administrators, not block enrollment.
 - FR-038: Progression Review must remain administrative, not automatically enforced by the system.
 
 ### Course And Module Offerings
@@ -131,22 +131,22 @@ All upload categories allow any file type.
 - FR-055: Archived Course Offerings must be read-only for Educators except during a post-course marking window.
 - FR-056: Administrators and Super Administrators must be able to access archived records.
 
-### Enrolment
+### Enrollment
 
 - FR-057: Students must not self-enrol.
 - FR-058: Educators must not self-assign to modules.
 - FR-059: Administrators must enrol Students into Course Offerings.
-- FR-060: Students may have multiple active enrolments.
-- FR-061: One enrolment may be marked as the Student's Main Enrolment.
+- FR-060: Students may have multiple active enrollments.
+- FR-061: One enrollment may be marked as the Student's Main Enrollment.
 - FR-062: Enrolling a Student into a Course Offering must grant default access to its Module Offerings.
-- FR-063: Administrators must be able to create Module Enrolment Exceptions.
-- FR-064: Module Enrolment Exceptions must support both inclusion and exclusion of Module Offerings.
+- FR-063: Administrators must be able to create Module Enrollment Exceptions.
+- FR-064: Module Enrollment Exceptions must support both inclusion and exclusion of Module Offerings.
 - FR-065: Effective Module Access must control access to attendance, assignments, module content, group chat, marking visibility, feedback, and notifications.
-- FR-066: Administrators must be able to import Student enrolments by CSV.
+- FR-066: Administrators must be able to import Student enrollments by CSV.
 - FR-067: CSV import must preview validation errors before committing.
 - FR-068: CSV import must match existing Students by Student Identifier or Institutional Email.
 - FR-069: CSV import may create missing Student user accounts.
-- FR-070: Module Enrolment Exceptions may be managed manually after CSV import.
+- FR-070: Module Enrollment Exceptions may be managed manually after CSV import.
 
 ### Class Sessions And Attendance
 
@@ -317,7 +317,7 @@ All upload categories allow any file type.
 - FR-211: Educator dashboard must show attendance not yet submitted.
 - FR-212: Educator dashboard must show educator mentions from Module Group Chats.
 - FR-213: Educator dashboard must show Students with low attendance, missing submissions, or grade risk for assigned Module Offerings.
-- FR-214: Administrator dashboard must show active Course Offerings, enrolment counts, upcoming events, missing educators/unassigned modules, moderation status, and attendance completion.
+- FR-214: Administrator dashboard must show active Course Offerings, enrollment counts, upcoming events, missing educators/unassigned modules, moderation status, and attendance completion.
 - FR-215: At-risk logic must flag attendance below `80%`.
 - FR-216: At-risk logic must flag Released Final Grade below `50%`.
 - FR-217: At-risk logic must flag overdue assignments without submission.
@@ -339,14 +339,14 @@ All upload categories allow any file type.
 - FR-227: Course, Module, and Curriculum setup CSV import is out of scope for the first version.
 - FR-228: Administrators must be able to bulk disable selected Student/Educator accounts.
 - FR-229: Administrators must be able to bulk enrol selected Students into a Course Offering.
-- FR-230: Administrators must be able to bulk apply Module Enrolment Exceptions to selected Students.
+- FR-230: Administrators must be able to bulk apply Module Enrollment Exceptions to selected Students.
 - FR-231: Administrators must be able to bulk archive eligible finished Course Offerings.
 - FR-232: Administrators must be able to export selected records.
 - FR-233: Bulk delete must not be supported for academic records.
 
 ### Audit And Record Preservation
 
-- FR-234: The system must audit sensitive account, academic setup, enrolment, attendance, marking, final grade, moderation, and file events.
+- FR-234: The system must audit sensitive account, academic setup, enrollment, attendance, marking, final grade, moderation, and file events.
 - FR-235: Operational Audit Events must be visible to Administrators and Super Administrators.
 - FR-236: System Audit Events must be visible only to Super Administrators.
 - FR-237: Audit Logs must record who performed the action, what changed, when it changed, and the reason where required.
@@ -398,7 +398,7 @@ The seed dataset must support realistic local development, testing, and demonstr
 ## Out Of Scope For First Version
 
 - Public registration.
-- Student self-enrolment.
+- Student self-enrollment.
 - Educator course/module creation.
 - Third-party OAuth.
 - Email notifications.
@@ -425,7 +425,7 @@ The final target is the full system, but implementation should proceed in phases
 
 1. Identity, roles, generated identifiers, and account lifecycle.
 2. Faculties, courses, modules, intakes, curriculum templates, and academic setup.
-3. Course offerings, module offerings, enrolment, and module enrolment exceptions.
+3. Course offerings, module offerings, enrollment, and module enrollment exceptions.
 4. Module content, content sections, shared links, and file storage.
 5. Assignments, submissions, assessment structures, marking, and final grades.
 6. Class sessions, attendance, educator attendance, correction windows, and reports.
