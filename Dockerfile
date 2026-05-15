@@ -1,5 +1,5 @@
 # Build stage
-FROM node:22-alpine AS builder
+FROM oven/bun:latest AS builder
 
 WORKDIR /app
 
@@ -7,24 +7,24 @@ WORKDIR /app
 COPY package.json bun.lock ./
 
 # Install dependencies
-RUN npm install --frozen-lockfile
+RUN bun install
 
 # Copy source code
 COPY . .
 
 # Build Next.js application
-RUN npm run build
+RUN bun run build
 
 # Runtime stage
-FROM node:22-alpine
+FROM oven/bun:latest
 
 WORKDIR /app
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+RUN useradd -m -u 1001 nextjs
 
 # Copy built application from builder
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
@@ -40,10 +40,10 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+  CMD bun -e "const res = await fetch('http://localhost:3000'); if (res.status !== 200) throw new Error(res.status)"
 
 # Use dumb-init to handle signals
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start Next.js server
-CMD ["node", "-e", "require('next/dist/bin/next').main(['start'])"]
+CMD ["bun", "start"]
