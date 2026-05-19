@@ -7,6 +7,7 @@ const PROTECTED_PREFIXES = [
   "/educator",
   "/student",
   "/dashboard",
+  "/change-password",
 ];
 
 const SESSION_COOKIE = "better-auth.session_token";

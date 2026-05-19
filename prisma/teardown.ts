@@ -10,6 +10,8 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   await prisma.session.deleteMany();
   await prisma.verification.deleteMany();
+  await prisma.auditLogEntry.deleteMany();
+  await prisma.systemSettings.deleteMany();
   await prisma.userAccount.deleteMany();
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();

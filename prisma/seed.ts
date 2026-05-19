@@ -50,6 +50,7 @@ const accounts = [
     generatedIdentifier: "SA000001",
     institutionalEmail: "SA000001@lms.edu.mv",
     status: "ACTIVE" as const,
+    mustChangePassword: false,
   },
   {
     name: "Administrator",
@@ -57,6 +58,7 @@ const accounts = [
     generatedIdentifier: "A000001",
     institutionalEmail: "A000001@lms.edu.mv",
     status: "ACTIVE" as const,
+    mustChangePassword: false,
   },
   {
     name: "Educator",
@@ -64,6 +66,7 @@ const accounts = [
     generatedIdentifier: "E000001",
     institutionalEmail: "E000001@lms.edu.mv",
     status: "ACTIVE" as const,
+    mustChangePassword: false,
   },
   {
     name: "Student",
@@ -71,6 +74,7 @@ const accounts = [
     generatedIdentifier: "S000001",
     institutionalEmail: "S000001@lms.edu.mv",
     status: "ACTIVE" as const,
+    mustChangePassword: false,
   },
   {
     name: "Inactive Student",
@@ -78,6 +82,23 @@ const accounts = [
     generatedIdentifier: "S000002",
     institutionalEmail: "S000002@lms.edu.mv",
     status: "INACTIVE" as const,
+    mustChangePassword: true,
+  },
+  {
+    name: "Disabled Student",
+    role: "STUDENT" as const,
+    generatedIdentifier: "S000003",
+    institutionalEmail: "S000003@lms.edu.mv",
+    status: "DISABLED" as const,
+    mustChangePassword: false,
+  },
+  {
+    name: "Force Change Student",
+    role: "STUDENT" as const,
+    generatedIdentifier: "S000004",
+    institutionalEmail: "S000004@lms.edu.mv",
+    status: "ACTIVE" as const,
+    mustChangePassword: true,
   },
 ];
 
@@ -97,7 +118,7 @@ async function main() {
         generatedIdentifier: account.generatedIdentifier,
         institutionalEmail: account.institutionalEmail,
         status: account.status,
-        mustChangePassword: true,
+        mustChangePassword: account.mustChangePassword,
       },
     });
   }
@@ -108,6 +129,8 @@ async function main() {
   console.log(`Educator:            E000001@lms.edu.mv / ${TEMP_PASSWORD}`);
   console.log(`Student:             S000001@lms.edu.mv / ${TEMP_PASSWORD}`);
   console.log(`Inactive student:    S000002@lms.edu.mv / ${TEMP_PASSWORD}`);
+  console.log(`Disabled student:    S000003@lms.edu.mv / ${TEMP_PASSWORD}`);
+  console.log(`Force-change student:S000004@lms.edu.mv / ${TEMP_PASSWORD}`);
 }
 
 main()

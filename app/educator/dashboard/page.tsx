@@ -9,12 +9,14 @@ export default async function EducatorDashboardPage() {
 
   const userAccount = await prisma.userAccount.findUnique({
     where: { userId: session.user.id },
-    select: { role: true },
+    select: { role: true, mustChangePassword: true },
   });
 
   if (!userAccount || userAccount.role !== "EDUCATOR") {
     redirect("/dashboard");
   }
+
+  if (userAccount.mustChangePassword) redirect("/change-password");
 
   return (
     <main className="p-8">
