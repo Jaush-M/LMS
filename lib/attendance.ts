@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { calculateEffectiveModuleAccess } from "./enrollment";
 
 type AttendanceEntry = {
   studentId: string;
@@ -330,18 +331,234 @@ export async function resolveCorrection(input: ResolveCorrectionInput): Promise<
       }),
     ]);
   } else {
-    await prisma.attendanceCorrectionRequest.update({
-      where: { id: correction.id },
-      data: {
-        status: "REJECTED",
-        resolvedById: input.resolverId,
-        resolvedAt: now,
-      },
-    });
+    await prisma.$transaction([
+      prisma.attendanceCorrectionRequest.update({
+        where: { id: correction.id },
+        data: {
+          status: "REJECTED",
+          resolvedById: input.resolverId,
+          resolvedAt: now,
+        },
+      }),
+      prisma.auditLogEntry.create({
+        data: {
+          eventType: "OPERATIONAL",
+          action: "CORRECTION_REJECTED",
+          actorId: input.resolverId,
+          entityType: "AttendanceCorrectionRequest",
+          entityId: correction.id,
+          reason: correction.reason,
+        },
+      }),
+    ]);
   }
 
   return {
     id: correction.id,
     status: input.action === "APPROVE" ? "APPROVED" : "REJECTED",
   };
+}
+
+type AdminOverrideInput = {
+  attendanceRecordId: string;
+  newStatus: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
+  reason: string;
+  overriddenById: string;
+};
+
+type AdminOverrideResult = {
+  id: string;
+  status: string;
+  overriddenById: string;
+  overriddenAt: Date;
+};
+
+export async function adminOverrideAttendance(input: AdminOverrideInput): Promise<AdminOverrideResult> {
+  const overrideUser = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.overriddenById } });
+  if (overrideUser.role !== "ADMINISTRATOR" && overrideUser.role !== "SUPER_ADMINISTRATOR") {
+    throw new Error("Only an Administrator can override attendance");
+  }
+
+  const record = await prisma.attendanceRecord.findUniqueOrThrow({
+    where: { id: input.attendanceRecordId },
+  });
+
+  const now = new Date();
+
+  const [updated] = await prisma.$transaction([
+    prisma.attendanceRecord.update({
+      where: { id: input.attendanceRecordId },
+      data: { status: input.newStatus },
+    }),
+    prisma.auditLogEntry.create({
+      data: {
+        eventType: "OPERATIONAL",
+        action: "ADMIN_OVERRIDE",
+        actorId: input.overriddenById,
+        entityType: "AttendanceRecord",
+        entityId: input.attendanceRecordId,
+        beforeJson: JSON.stringify({ status: record.status }),
+        afterJson: JSON.stringify({ status: input.newStatus }),
+        reason: input.reason,
+      },
+    }),
+  ]);
+
+  return {
+    id: updated.id,
+    status: updated.status,
+    overriddenById: input.overriddenById,
+    overriddenAt: now,
+  };
+}
+
+type AdminOverrideSessionInput = {
+  classSessionId: string;
+  entries: { attendanceRecordId: string; newStatus: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" }[];
+  reason: string;
+  overriddenById: string;
+};
+
+type AdminOverrideSessionResult = {
+  overrides: {
+    id: string;
+    status: string;
+    overriddenById: string;
+    overriddenAt: Date;
+  }[];
+};
+
+export async function adminOverrideSessionAttendance(input: AdminOverrideSessionInput): Promise<AdminOverrideSessionResult> {
+  const overrideUser = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.overriddenById } });
+  if (overrideUser.role !== "ADMINISTRATOR" && overrideUser.role !== "SUPER_ADMINISTRATOR") {
+    throw new Error("Only an Administrator can override attendance");
+  }
+
+  const records = await prisma.attendanceRecord.findMany({
+    where: { id: { in: input.entries.map((e) => e.attendanceRecordId) } },
+  });
+  const recordMap = new Map(records.map((r) => [r.id, r]));
+
+  const now = new Date();
+
+  const overrides: { id: string; status: string; overriddenById: string; overriddenAt: Date }[] = [];
+
+  await prisma.$transaction(async (tx) => {
+    for (const entry of input.entries) {
+      const record = recordMap.get(entry.attendanceRecordId);
+      if (!record) continue;
+
+      await tx.attendanceRecord.update({
+        where: { id: entry.attendanceRecordId },
+        data: { status: entry.newStatus },
+      });
+
+      await tx.auditLogEntry.create({
+        data: {
+          eventType: "OPERATIONAL",
+          action: "ADMIN_OVERRIDE",
+          actorId: input.overriddenById,
+          entityType: "AttendanceRecord",
+          entityId: entry.attendanceRecordId,
+          beforeJson: JSON.stringify({ status: record.status }),
+          afterJson: JSON.stringify({ status: entry.newStatus }),
+          reason: input.reason,
+        },
+      });
+
+      overrides.push({
+        id: entry.attendanceRecordId,
+        status: entry.newStatus,
+        overriddenById: input.overriddenById,
+        overriddenAt: now,
+      });
+    }
+  });
+
+  return { overrides };
+}
+
+type ExportAttendanceCSVInput = {
+  moduleOfferingId: string;
+  requestedById: string;
+};
+
+export async function exportAttendanceCSV(input: ExportAttendanceCSVInput): Promise<string> {
+  const requester = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.requestedById } });
+  if (requester.role !== "EDUCATOR" && requester.role !== "ADMINISTRATOR" && requester.role !== "SUPER_ADMINISTRATOR") {
+    throw new Error("Only an Educator or Administrator can export attendance CSV");
+  }
+
+  const sessions = await prisma.classSession.findMany({
+    where: { moduleOfferingId: input.moduleOfferingId },
+    orderBy: { startAt: "asc" },
+  });
+
+  const moduleOffering = await prisma.moduleOffering.findUniqueOrThrow({
+    where: { id: input.moduleOfferingId },
+    select: { courseOfferingId: true },
+  });
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { courseOfferingId: moduleOffering.courseOfferingId, status: "ACTIVE" },
+    include: {
+      student: { include: { user: true } },
+      moduleEnrollmentExceptions: { select: { moduleOfferingId: true, exceptionType: true } },
+    },
+  });
+
+  const allModuleOfferings = await prisma.moduleOffering.findMany({
+    where: { courseOfferingId: moduleOffering.courseOfferingId },
+    select: { id: true },
+  });
+
+  const attendanceRecords = await prisma.attendanceRecord.findMany({
+    where: { classSession: { moduleOfferingId: input.moduleOfferingId } },
+  });
+
+  const recordsByStudentAndSession = new Map<string, Map<string, string>>();
+  for (const record of attendanceRecords) {
+    if (!recordsByStudentAndSession.has(record.studentId)) {
+      recordsByStudentAndSession.set(record.studentId, new Map());
+    }
+    recordsByStudentAndSession.get(record.studentId)!.set(record.classSessionId, record.status);
+  }
+
+  const sessionHeaders = sessions.map((s) => `"${s.startAt.toISOString().split("T")[0]}"`).join(",");
+  const header = `"Student Identifier","Name",${sessionHeaders},"Present","Absent","Late","Excused","Attendance (%)"`;
+
+  const rows: string[] = [header];
+
+  for (const enrollment of enrollments) {
+    const effective = calculateEffectiveModuleAccess(allModuleOfferings, enrollment.moduleEnrollmentExceptions);
+    if (!effective.some((mo) => mo.id === input.moduleOfferingId)) continue;
+
+    const student = enrollment.student;
+    const identifier = student.generatedIdentifier;
+    const name = `"${student.user.name}"`;
+
+    const sessionStatuses = sessions.map((s) => {
+      const status = recordsByStudentAndSession.get(student.id)?.get(s.id);
+      return status ?? "";
+    });
+
+    let present = 0;
+    let absent = 0;
+    let late = 0;
+    let excused = 0;
+
+    for (const status of sessionStatuses) {
+      if (status === "PRESENT") present++;
+      else if (status === "ABSENT") absent++;
+      else if (status === "LATE") late++;
+      else if (status === "EXCUSED") excused++;
+    }
+
+    const countable = present + absent + late;
+    const percentage = countable > 0 ? Math.round(((present + late) / countable) * 100) : "";
+
+    rows.push(`"${identifier}",${name},${sessionStatuses.join(",")},${present},${absent},${late},${excused},${percentage}`);
+  }
+
+  return rows.join("\n");
 }
