@@ -52,7 +52,7 @@ describe("uploadFile (integration)", () => {
 
   beforeAll(async () => {
     const account = await prisma.userAccount.findFirstOrThrow({
-      where: { institutionalEmail: "superadmin@lms.local" },
+      where: { role: "SUPER_ADMINISTRATOR" },
     });
     uploadedById = account.id;
   });

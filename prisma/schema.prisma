@@ -90,6 +90,42 @@ model UserAccount {
   fileAssets          FileAsset[]
 }
 
+// ── Audit Log ─────────────────────────────────────────────────────────────
+
+enum AuditEventType {
+  SYSTEM
+  OPERATIONAL
+}
+
+model AuditLogEntry {
+  id         String         @id @default(cuid())
+  eventType  AuditEventType
+  action     String
+  actorId    String
+  entityType String
+  entityId   String?
+  beforeJson String?
+  afterJson  String?
+  reason     String?
+  createdAt  DateTime       @default(now())
+}
+
+// ── System Settings ────────────────────────────────────────────────────────
+
+model SystemSettings {
+  id                                    String   @id @default(cuid())
+  defaultReminderPeriodDays             Int      @default(15)
+  attendanceCorrectionWindowDays        Int      @default(7)
+  passThresholdPercent                  Float    @default(50)
+  attendanceRiskThresholdPercent        Float    @default(80)
+  postCourseMarkingWindowDays           Int      @default(14)
+  maxUploadBytesChatAttachment          Int      @default(10485760)
+  maxUploadBytesSubmission              Int      @default(104857600)
+  maxUploadBytesContentAttachment       Int      @default(52428800)
+  maxUploadBytesAnnouncementAttachment  Int      @default(20971520)
+  updatedAt                             DateTime @updatedAt
+}
+
 // ── File storage ───────────────────────────────────────────────────────────
 
 enum FileCategory {

@@ -10,12 +10,14 @@ export default async function SuperAdministratorDashboardPage() {
 
   const userAccount = await prisma.userAccount.findUnique({
     where: { userId: session.user.id },
-    select: { role: true },
+    select: { role: true, mustChangePassword: true },
   });
 
   if (!userAccount || userAccount.role !== "SUPER_ADMINISTRATOR") {
     redirect("/dashboard");
   }
+
+  if (userAccount.mustChangePassword) redirect("/change-password");
 
   return (
     <main className="p-8">
@@ -27,6 +29,12 @@ export default async function SuperAdministratorDashboardPage() {
           className="text-blue-600 underline"
         >
           Create administrator
+        </Link>
+        <Link
+          href="/super-administrator/system-settings"
+          className="text-blue-600 underline"
+        >
+          System settings
         </Link>
       </nav>
     </main>

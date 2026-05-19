@@ -86,3 +86,108 @@ export async function createAccount(params: {
 
   return { userId, identifier, institutionalEmail, temporaryPassword };
 }
+
+function assertCanManage(actorRole: string, targetRole: string) {
+  if (actorRole === "STUDENT" || actorRole === "EDUCATOR") throw new Error("Unauthorized");
+  if (actorRole === "ADMINISTRATOR" && targetRole !== "STUDENT" && targetRole !== "EDUCATOR") {
+    throw new Error("Unauthorized");
+  }
+}
+
+export async function activateAccount(actorId: string, targetId: string): Promise<void> {
+  const [actor, target] = await Promise.all([
+    prisma.userAccount.findUniqueOrThrow({ where: { id: actorId } }),
+    prisma.userAccount.findUniqueOrThrow({ where: { id: targetId } }),
+  ]);
+
+  assertCanManage(actor.role, target.role);
+
+  if (target.status !== "INACTIVE") {
+    throw new Error(`Cannot activate a user account with status ${target.status}`);
+  }
+
+  await prisma.$transaction([
+    prisma.userAccount.update({ where: { id: targetId }, data: { status: "ACTIVE" } }),
+    prisma.auditLogEntry.create({
+      data: {
+        eventType: "SYSTEM",
+        action: "ACCOUNT_ACTIVATED",
+        actorId,
+        entityType: "UserAccount",
+        entityId: targetId,
+        beforeJson: JSON.stringify({ status: "INACTIVE" }),
+        afterJson: JSON.stringify({ status: "ACTIVE" }),
+      },
+    }),
+  ]);
+}
+
+export async function disableAccount(actorId: string, targetId: string): Promise<void> {
+  const [actor, target] = await Promise.all([
+    prisma.userAccount.findUniqueOrThrow({ where: { id: actorId } }),
+    prisma.userAccount.findUniqueOrThrow({ where: { id: targetId } }),
+  ]);
+
+  assertCanManage(actor.role, target.role);
+
+  if (target.status !== "ACTIVE") {
+    throw new Error(`Cannot disable a user account with status ${target.status}`);
+  }
+
+  await prisma.$transaction([
+    prisma.userAccount.update({ where: { id: targetId }, data: { status: "DISABLED" } }),
+    prisma.auditLogEntry.create({
+      data: {
+        eventType: "SYSTEM",
+        action: "ACCOUNT_DISABLED",
+        actorId,
+        entityType: "UserAccount",
+        entityId: targetId,
+        beforeJson: JSON.stringify({ status: "ACTIVE" }),
+        afterJson: JSON.stringify({ status: "DISABLED" }),
+      },
+    }),
+  ]);
+}
+
+export async function changeTemporaryPassword(userId: string, newPassword: string): Promise<void> {
+  const hash = await hashPassword(newPassword);
+  await prisma.$transaction([
+    prisma.account.updateMany({
+      where: { userId, providerId: "credential" },
+      data: { password: hash },
+    }),
+    prisma.userAccount.update({
+      where: { userId },
+      data: { mustChangePassword: false },
+    }),
+  ]);
+}
+
+export async function reactivateAccount(actorId: string, targetId: string): Promise<void> {
+  const [actor, target] = await Promise.all([
+    prisma.userAccount.findUniqueOrThrow({ where: { id: actorId } }),
+    prisma.userAccount.findUniqueOrThrow({ where: { id: targetId } }),
+  ]);
+
+  assertCanManage(actor.role, target.role);
+
+  if (target.status !== "DISABLED") {
+    throw new Error(`Cannot reactivate a user account with status ${target.status}`);
+  }
+
+  await prisma.$transaction([
+    prisma.userAccount.update({ where: { id: targetId }, data: { status: "ACTIVE" } }),
+    prisma.auditLogEntry.create({
+      data: {
+        eventType: "SYSTEM",
+        action: "ACCOUNT_REACTIVATED",
+        actorId,
+        entityType: "UserAccount",
+        entityId: targetId,
+        beforeJson: JSON.stringify({ status: "DISABLED" }),
+        afterJson: JSON.stringify({ status: "ACTIVE" }),
+      },
+    }),
+  ]);
+}

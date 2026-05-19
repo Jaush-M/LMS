@@ -10,12 +10,14 @@ export default async function AdministratorDashboardPage() {
 
   const userAccount = await prisma.userAccount.findUnique({
     where: { userId: session.user.id },
-    select: { role: true },
+    select: { role: true, mustChangePassword: true },
   });
 
   if (!userAccount || userAccount.role !== "ADMINISTRATOR") {
     redirect("/dashboard");
   }
+
+  if (userAccount.mustChangePassword) redirect("/change-password");
 
   return (
     <main className="p-8">
@@ -24,6 +26,9 @@ export default async function AdministratorDashboardPage() {
       <nav className="mt-6 space-x-4">
         <Link href="/administrator/create-account" className="text-blue-600 underline">
           Create account
+        </Link>
+        <Link href="/administrator/accounts" className="text-blue-600 underline">
+          Manage accounts
         </Link>
       </nav>
     </main>

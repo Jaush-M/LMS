@@ -19,11 +19,15 @@ export default async function DashboardPage() {
 
   const userAccount = await prisma.userAccount.findUnique({
     where: { userId: session.user.id },
-    select: { role: true },
+    select: { role: true, mustChangePassword: true },
   });
 
   if (!userAccount) {
     redirect("/sign-in");
+  }
+
+  if (userAccount.mustChangePassword) {
+    redirect("/change-password");
   }
 
   redirect(roleRoutes[userAccount.role]);

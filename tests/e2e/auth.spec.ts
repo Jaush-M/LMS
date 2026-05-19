@@ -72,4 +72,35 @@ test.describe("authentication — error cases", () => {
     await expect(page).toHaveURL("/sign-in");
     await expect(page.getByRole("alert")).toBeVisible();
   });
+
+  test("disabled User Account sign-in is rejected (TC-002)", async ({
+    page,
+  }) => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Institutional email").fill("S000003@lms.edu.mv");
+    await page.getByLabel("Password").fill(TEMP_PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    await expect(page).toHaveURL("/sign-in");
+    await expect(page.getByRole("alert")).toBeVisible();
+  });
+});
+
+test.describe("temporary password — force change flow", () => {
+  test("user with mustChangePassword is redirected to change-password and lands on dashboard after", async ({
+    page,
+  }) => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Institutional email").fill("S000004@lms.edu.mv");
+    await page.getByLabel("Password").fill(TEMP_PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    await expect(page).toHaveURL(/\/change-password/);
+
+    await page.getByLabel("New password").fill("NewSecurePass99!");
+    await page.getByLabel("Confirm password").fill("NewSecurePass99!");
+    await page.getByRole("button", { name: "Change password" }).click();
+
+    await expect(page).toHaveURL(/\/student\/dashboard/);
+  });
 });
