@@ -100,6 +100,22 @@ const accounts = [
     status: "ACTIVE" as const,
     mustChangePassword: true,
   },
+  {
+    name: "Inactive Management Student",
+    role: "STUDENT" as const,
+    generatedIdentifier: "S000005",
+    institutionalEmail: "S000005@lms.edu.mv",
+    status: "INACTIVE" as const,
+    mustChangePassword: true,
+  },
+  {
+    name: "Active Management Student",
+    role: "STUDENT" as const,
+    generatedIdentifier: "S000006",
+    institutionalEmail: "S000006@lms.edu.mv",
+    status: "ACTIVE" as const,
+    mustChangePassword: false,
+  },
 ];
 
 const defaultIntakes = ["January", "May", "September"];

@@ -77,18 +77,19 @@ enum UserAccountStatus {
 }
 
 model UserAccount {
-  id                  String            @id @default(cuid())
-  userId              String            @unique
-  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role                UserRole
-  generatedIdentifier String            @unique
-  institutionalEmail  String            @unique
-  status              UserAccountStatus @default(INACTIVE)
-  mustChangePassword  Boolean           @default(true)
-  homeFacultyId       String?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  fileAssets          FileAsset[]
+  id                     String            @id @default(cuid())
+  userId                 String            @unique
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                   UserRole
+  generatedIdentifier    String            @unique
+  institutionalEmail     String            @unique
+  status                 UserAccountStatus @default(INACTIVE)
+  mustChangePassword     Boolean           @default(true)
+  homeFacultyId          String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  fileAssets             FileAsset[]
+  primaryModuleOfferings ModuleOffering[]  @relation("PrimaryEducatorModuleOfferings")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -127,6 +128,7 @@ model Course {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   curriculumTemplate CurriculumTemplate?
+  courseOfferings    CourseOffering[]
 }
 
 model Module {
@@ -141,19 +143,22 @@ model Module {
 }
 
 model Intake {
-  id        String          @id @default(cuid())
-  name      String
-  status    CatalogueStatus @default(ACTIVE)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id              String           @id @default(cuid())
+  name            String
+  status          CatalogueStatus  @default(ACTIVE)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  courseOfferings CourseOffering[]
 }
 
 model StudyMode {
-  id        String          @id @default(cuid())
-  name      String
-  status    CatalogueStatus @default(ACTIVE)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id              String           @id @default(cuid())
+  name            String
+  status          CatalogueStatus  @default(ACTIVE)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  courseOfferings CourseOffering[]
+  moduleOfferings ModuleOffering[]
 }
 
 model SessionType {
@@ -187,17 +192,17 @@ model AuditLogEntry {
 // ── System Settings ────────────────────────────────────────────────────────
 
 model SystemSettings {
-  id                                    String   @id @default(cuid())
-  defaultReminderPeriodDays             Int      @default(15)
-  attendanceCorrectionWindowDays        Int      @default(7)
-  passThresholdPercent                  Float    @default(50)
-  attendanceRiskThresholdPercent        Float    @default(80)
-  postCourseMarkingWindowDays           Int      @default(14)
-  maxUploadBytesChatAttachment          Int      @default(10485760)
-  maxUploadBytesSubmission              Int      @default(104857600)
-  maxUploadBytesContentAttachment       Int      @default(52428800)
-  maxUploadBytesAnnouncementAttachment  Int      @default(20971520)
-  updatedAt                             DateTime @updatedAt
+  id                                   String   @id @default(cuid())
+  defaultReminderPeriodDays            Int      @default(15)
+  attendanceCorrectionWindowDays       Int      @default(7)
+  passThresholdPercent                 Float    @default(50)
+  attendanceRiskThresholdPercent       Float    @default(80)
+  postCourseMarkingWindowDays          Int      @default(14)
+  maxUploadBytesChatAttachment         Int      @default(10485760)
+  maxUploadBytesSubmission             Int      @default(104857600)
+  maxUploadBytesContentAttachment      Int      @default(52428800)
+  maxUploadBytesAnnouncementAttachment Int      @default(20971520)
+  updatedAt                            DateTime @updatedAt
 }
 
 // ── File storage ───────────────────────────────────────────────────────────
@@ -272,6 +277,7 @@ model TemplateModule {
   prerequisites               TemplateModulePrerequisite[] @relation("Dependent")
   dependents                  TemplateModulePrerequisite[] @relation("Prerequisite")
   defaultAssessmentComponents DefaultAssessmentComponent[]
+  moduleOfferings             ModuleOffering[]
 }
 
 model TemplateModulePrerequisite {
@@ -298,4 +304,63 @@ model DefaultAssessmentComponent {
   maximumMark      Float
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
+}
+
+// ── Course Delivery ──────────────────────────────────────────────────────
+
+enum OfferingStatus {
+  PLANNED
+  ACTIVE
+  ARCHIVED
+}
+
+model CourseOffering {
+  id          String         @id @default(cuid())
+  courseId    String
+  course      Course         @relation(fields: [courseId], references: [id])
+  intakeId    String
+  intake      Intake         @relation(fields: [intakeId], references: [id])
+  studyModeId String
+  studyMode   StudyMode      @relation(fields: [studyModeId], references: [id])
+  name        String
+  startAt     DateTime
+  finishAt    DateTime
+  capacity    Int            @default(24)
+  status      OfferingStatus @default(PLANNED)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  moduleOfferings ModuleOffering[]
+
+  @@unique([courseId, intakeId])
+}
+
+model ModuleOffering {
+  id                String         @id @default(cuid())
+  courseOfferingId  String
+  courseOffering    CourseOffering @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  templateModuleId  String
+  templateModule    TemplateModule @relation(fields: [templateModuleId], references: [id])
+  primaryEducatorId String
+  primaryEducator   UserAccount    @relation("PrimaryEducatorModuleOfferings", fields: [primaryEducatorId], references: [id])
+  studyModeId       String?
+  studyMode         StudyMode?     @relation(fields: [studyModeId], references: [id])
+  startAt           DateTime
+  finishAt          DateTime
+  status            OfferingStatus @default(PLANNED)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  moduleGroupChat ModuleGroupChat?
+
+  @@unique([courseOfferingId, templateModuleId])
+}
+
+model ModuleGroupChat {
+  id               String         @id @default(cuid())
+  moduleOfferingId String         @unique
+  moduleOffering   ModuleOffering @relation(fields: [moduleOfferingId], references: [id], onDelete: Cascade)
+  isReadOnly       Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }
