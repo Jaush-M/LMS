@@ -20,8 +20,10 @@ async function nextSeqForRole(role: UserRole): Promise<number> {
   });
   if (records.length === 0) return 1;
   const prefix = ROLE_PREFIX[role];
-  const seqs = records.map((r) => parseInt(r.generatedIdentifier.slice(prefix.length), 10));
-  return Math.max(...seqs) + 1;
+  const seqs = records
+    .map((r) => parseInt(r.generatedIdentifier.slice(prefix.length), 10))
+    .filter((n) => !isNaN(n));
+  return seqs.length === 0 ? 1 : Math.max(...seqs) + 1;
 }
 
 function generateTemporaryPassword(): string {
