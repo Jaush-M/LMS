@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { submitAttendance, getAttendanceForSession, getStudentAttendancePercentage, isAttendanceLocked, requestCorrection, resolveCorrection } from "./attendance";
+import { submitAttendance, getAttendanceForSession, getStudentAttendancePercentage, isAttendanceLocked, requestCorrection, resolveCorrection, adminOverrideAttendance, adminOverrideSessionAttendance, exportAttendanceCSV } from "./attendance";
 import { createClassSession } from "./class-sessions";
 import { createFaculty, createCourse, createModule, createIntake, createStudyMode } from "./catalogue";
 import { createCurriculumTemplate, addAcademicLevel, addTemplateModule } from "./curriculum-template";
@@ -867,6 +867,31 @@ describe("correction requests", () => {
     expect(unchangedRecord.status).toBe("PRESENT");
   });
 
+  it("administrator rejecting correction request creates an audit log entry", async () => {
+    const { educator, admin, attendanceRecord } = await setupLockedSession();
+
+    const correction = await requestCorrection({
+      attendanceRecordId: attendanceRecord.id,
+      educatorId: educator.id,
+      requestedStatus: "ABSENT",
+      reason: "Marked present by mistake",
+    });
+    createdCorrectionRequestIds.push(correction.id);
+
+    await resolveCorrection({
+      correctionRequestId: correction.id,
+      resolverId: admin.id,
+      action: "REJECT",
+    });
+
+    const auditEntry = await prisma.auditLogEntry.findFirst({
+      where: { entityType: "AttendanceCorrectionRequest", entityId: correction.id, action: "CORRECTION_REJECTED" },
+    });
+    expect(auditEntry).not.toBeNull();
+    expect(auditEntry?.actorId).toBe(admin.id);
+    expect(auditEntry?.reason).toBe("Marked present by mistake");
+  });
+
   it("non-administrator cannot resolve correction request", async () => {
     const { educator, admin, attendanceRecord } = await setupLockedSession();
 
@@ -913,5 +938,371 @@ describe("correction requests", () => {
         action: "REJECT",
       })
     ).rejects.toThrow(/already resolved/i);
+  });
+});
+
+// ── admin override ──────────────────────────────────────────────────────────
+
+describe("admin override", () => {
+  afterEach(cleanup);
+
+  function setupLockedSession() {
+    return (async () => {
+      const { moduleOfferings, educator, offering } = await createOfferingSetup(["Programming"]);
+      const admin = await createTestUserAccount("ADMINISTRATOR");
+      const sessionType = await createSessionType();
+      const student = await createTestUserAccount("STUDENT");
+
+      const enroll = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+      if (enroll.status !== "enrolled") throw new Error("Expected enrolled");
+      createdEnrollmentIds.push(enroll.enrollment.id);
+
+      const session = await createClassSession({
+        moduleOfferingId: moduleOfferings[0].id,
+        sessionTypeId: sessionType.id,
+        startAt: new Date("2026-10-01T09:00:00.000Z"),
+        finishAt: new Date("2026-10-01T11:00:00.000Z"),
+        createdById: admin.id,
+      });
+      createdClassSessionIds.push(session.session.id);
+
+      const submittedAt = new Date("2026-10-01T10:00:00.000Z");
+      const r = await submitAttendance({
+        classSessionId: session.session.id,
+        educatorId: educator.id,
+        submittedAt,
+        attendanceEntries: [{ studentId: student.id, status: "PRESENT" }],
+      });
+      for (const record of r.attendanceRecords) createdAttendanceRecordIds.push(record.id);
+      createdEducatorAttendanceIds.push(r.educatorAttendance.id);
+
+      const afterWindow = new Date("2026-10-09T10:00:00.001Z");
+      await isAttendanceLocked(session.session.id, afterWindow);
+
+      const attendanceRecord = await prisma.attendanceRecord.findFirstOrThrow({
+        where: { classSessionId: session.session.id, studentId: student.id },
+      });
+
+      return { moduleOfferings, educator, admin, student, session: session.session, attendanceRecord, offering };
+    })();
+  }
+
+  it("administrator overrides single locked attendance record with reason", async () => {
+    const { admin, attendanceRecord } = await setupLockedSession();
+
+    const result = await adminOverrideAttendance({
+      attendanceRecordId: attendanceRecord.id,
+      newStatus: "ABSENT",
+      reason: "Data entry error",
+      overriddenById: admin.id,
+    });
+
+    expect(result.status).toBe("ABSENT");
+    expect(result.overriddenById).toBe(admin.id);
+    expect(result.overriddenAt).toBeInstanceOf(Date);
+  });
+
+  it("administrator overriding single locked attendance record creates an audit log entry", async () => {
+    const { admin, attendanceRecord } = await setupLockedSession();
+
+    const result = await adminOverrideAttendance({
+      attendanceRecordId: attendanceRecord.id,
+      newStatus: "ABSENT",
+      reason: "Data entry error",
+      overriddenById: admin.id,
+    });
+
+    const auditEntry = await prisma.auditLogEntry.findFirst({
+      where: { entityType: "AttendanceRecord", entityId: attendanceRecord.id, action: "ADMIN_OVERRIDE" },
+    });
+    expect(auditEntry).not.toBeNull();
+    expect(auditEntry?.actorId).toBe(admin.id);
+    expect(auditEntry?.reason).toBe("Data entry error");
+    expect(JSON.parse(auditEntry!.beforeJson!)).toEqual({ status: "PRESENT" });
+    expect(JSON.parse(auditEntry!.afterJson!)).toEqual({ status: "ABSENT" });
+  });
+
+  it("educator cannot override attendance record", async () => {
+    const { educator, attendanceRecord } = await setupLockedSession();
+
+    await expect(
+      adminOverrideAttendance({
+        attendanceRecordId: attendanceRecord.id,
+        newStatus: "ABSENT",
+        reason: "Data entry error",
+        overriddenById: educator.id,
+      })
+    ).rejects.toThrow(/administrator/i);
+  });
+
+  it("super administrator can override attendance record", async () => {
+    const { admin: _admin, attendanceRecord } = await setupLockedSession();
+    const superAdmin = await createTestUserAccount("SUPER_ADMINISTRATOR");
+
+    const result = await adminOverrideAttendance({
+      attendanceRecordId: attendanceRecord.id,
+      newStatus: "EXCUSED",
+      reason: "Medical documentation received",
+      overriddenById: superAdmin.id,
+    });
+
+    expect(result.status).toBe("EXCUSED");
+    expect(result.overriddenById).toBe(superAdmin.id);
+  });
+});
+
+describe("admin override session", () => {
+  afterEach(cleanup);
+
+  function setupLockedSessionWithStudents() {
+    return (async () => {
+      const { moduleOfferings, educator, offering } = await createOfferingSetup(["Programming"]);
+      const admin = await createTestUserAccount("ADMINISTRATOR");
+      const sessionType = await createSessionType();
+      const student1 = await createTestUserAccount("STUDENT");
+      const student2 = await createTestUserAccount("STUDENT");
+      const student3 = await createTestUserAccount("STUDENT");
+
+      for (const student of [student1, student2, student3]) {
+        const enroll = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+        if (enroll.status !== "enrolled") throw new Error("Expected enrolled");
+        createdEnrollmentIds.push(enroll.enrollment.id);
+      }
+
+      const session = await createClassSession({
+        moduleOfferingId: moduleOfferings[0].id,
+        sessionTypeId: sessionType.id,
+        startAt: new Date("2026-10-01T09:00:00.000Z"),
+        finishAt: new Date("2026-10-01T11:00:00.000Z"),
+        createdById: admin.id,
+      });
+      createdClassSessionIds.push(session.session.id);
+
+      const submittedAt = new Date("2026-10-01T10:00:00.000Z");
+      const r = await submitAttendance({
+        classSessionId: session.session.id,
+        educatorId: educator.id,
+        submittedAt,
+        attendanceEntries: [
+          { studentId: student1.id, status: "PRESENT" },
+          { studentId: student2.id, status: "ABSENT" },
+          { studentId: student3.id, status: "LATE" },
+        ],
+      });
+      for (const record of r.attendanceRecords) createdAttendanceRecordIds.push(record.id);
+      createdEducatorAttendanceIds.push(r.educatorAttendance.id);
+
+      const afterWindow = new Date("2026-10-09T10:00:00.001Z");
+      await isAttendanceLocked(session.session.id, afterWindow);
+
+      const attendanceRecords = await prisma.attendanceRecord.findMany({
+        where: { classSessionId: session.session.id },
+        orderBy: { studentId: "asc" },
+      });
+
+      return { moduleOfferings, educator, admin, students: [student1, student2, student3], session: session.session, attendanceRecords, offering };
+    })();
+  }
+
+  it("administrator overrides all attendance records in a locked session", async () => {
+    const { admin, students, session, attendanceRecords } = await setupLockedSessionWithStudents();
+
+    const result = await adminOverrideSessionAttendance({
+      classSessionId: session.id,
+      entries: attendanceRecords.map((r) => ({
+        attendanceRecordId: r.id,
+        newStatus: "EXCUSED",
+      })),
+      reason: "Session cancelled retroactively",
+      overriddenById: admin.id,
+    });
+
+    expect(result.overrides).toHaveLength(3);
+    for (const override of result.overrides) {
+      expect(override.status).toBe("EXCUSED");
+      expect(override.overriddenById).toBe(admin.id);
+    }
+  });
+
+  it("administrator overriding session creates audit log entries for each record", async () => {
+    const { admin, attendanceRecords, session } = await setupLockedSessionWithStudents();
+
+    await adminOverrideSessionAttendance({
+      classSessionId: session.id,
+      entries: attendanceRecords.map((r) => ({
+        attendanceRecordId: r.id,
+        newStatus: "EXCUSED",
+      })),
+      reason: "Session cancelled retroactively",
+      overriddenById: admin.id,
+    });
+
+    for (const record of attendanceRecords) {
+      const auditEntry = await prisma.auditLogEntry.findFirst({
+        where: { entityType: "AttendanceRecord", entityId: record.id, action: "ADMIN_OVERRIDE" },
+      });
+      expect(auditEntry).not.toBeNull();
+      expect(auditEntry?.reason).toBe("Session cancelled retroactively");
+    }
+  });
+
+  it("educator cannot override session attendance", async () => {
+    const { educator, attendanceRecords, session } = await setupLockedSessionWithStudents();
+
+    await expect(
+      adminOverrideSessionAttendance({
+        classSessionId: session.id,
+        entries: attendanceRecords.map((r) => ({
+          attendanceRecordId: r.id,
+          newStatus: "EXCUSED",
+        })),
+        reason: "Session cancelled retroactively",
+        overriddenById: educator.id,
+      })
+    ).rejects.toThrow(/administrator/i);
+  });
+});
+
+// ── export attendance CSV ────────────────────────────────────────────────────
+
+describe("exportAttendanceCSV", () => {
+  afterEach(cleanup);
+
+  function setupModuleOfferingWithAttendance() {
+    return (async () => {
+      const { moduleOfferings, educator, offering } = await createOfferingSetup(["Programming"]);
+      const admin = await createTestUserAccount("ADMINISTRATOR");
+      const sessionType = await createSessionType();
+      const student1 = await createTestUserAccount("STUDENT");
+      const student2 = await createTestUserAccount("STUDENT");
+
+      for (const student of [student1, student2]) {
+        const enroll = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+        if (enroll.status !== "enrolled") throw new Error("Expected enrolled");
+        createdEnrollmentIds.push(enroll.enrollment.id);
+      }
+
+      const sessions = [];
+      for (const day of ["2026-10-01", "2026-10-03", "2026-10-05"]) {
+        const session = await createClassSession({
+          moduleOfferingId: moduleOfferings[0].id,
+          sessionTypeId: sessionType.id,
+          startAt: new Date(`${day}T09:00:00.000Z`),
+          finishAt: new Date(`${day}T11:00:00.000Z`),
+          createdById: admin.id,
+        });
+        createdClassSessionIds.push(session.session.id);
+        sessions.push(session.session);
+      }
+
+      await submitAttendance({
+        classSessionId: sessions[0].id,
+        educatorId: educator.id,
+        submittedAt: new Date("2026-10-01T10:00:00.000Z"),
+        attendanceEntries: [
+          { studentId: student1.id, status: "PRESENT" },
+          { studentId: student2.id, status: "PRESENT" },
+        ],
+      });
+      await submitAttendance({
+        classSessionId: sessions[1].id,
+        educatorId: educator.id,
+        submittedAt: new Date("2026-10-03T10:00:00.000Z"),
+        attendanceEntries: [
+          { studentId: student1.id, status: "LATE" },
+          { studentId: student2.id, status: "ABSENT" },
+        ],
+      });
+      await submitAttendance({
+        classSessionId: sessions[2].id,
+        educatorId: educator.id,
+        submittedAt: new Date("2026-10-05T10:00:00.000Z"),
+        attendanceEntries: [
+          { studentId: student1.id, status: "ABSENT" },
+          { studentId: student2.id, status: "EXCUSED" },
+        ],
+      });
+
+      return { moduleOffering: moduleOfferings[0], educator, admin, students: [student1, student2], sessions, offering };
+    })();
+  }
+
+  it("CSV contains Student Identifier, Name, per-session status, summary counts, and percentage", async () => {
+    const { moduleOffering, educator, students } = await setupModuleOfferingWithAttendance();
+
+    const csv = await exportAttendanceCSV({ moduleOfferingId: moduleOffering.id, requestedById: educator.id });
+
+    const lines = csv.split("\n");
+    expect(lines[0]).toContain("Student Identifier");
+    expect(lines[0]).toContain("Name");
+    expect(lines[0]).toContain("Attendance (%)");
+    expect(lines[0]).toContain("Present");
+    expect(lines[0]).toContain("Absent");
+    expect(lines[0]).toContain("Late");
+    expect(lines[0]).toContain("Excused");
+
+    expect(lines).toHaveLength(3);
+
+    const student1Line = lines.find((l) => l.includes(students[0].generatedIdentifier))!;
+    expect(student1Line).toContain("67");
+
+    const student2Line = lines.find((l) => l.includes(students[1].generatedIdentifier))!;
+    expect(student2Line).toContain("50");
+  });
+
+  it("per-session columns show status for each class session", async () => {
+    const { moduleOffering, educator, sessions } = await setupModuleOfferingWithAttendance();
+
+    const csv = await exportAttendanceCSV({ moduleOfferingId: moduleOffering.id, requestedById: educator.id });
+
+    const lines = csv.split("\n");
+    const header = lines[0];
+    for (const session of sessions) {
+      expect(header).toContain(session.startAt.toISOString().split("T")[0]);
+    }
+  });
+
+  it("student excluded from module offering is not in CSV", async () => {
+    const { moduleOffering, educator, offering } = await setupModuleOfferingWithAttendance();
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const excludedStudent = await createTestUserAccount("STUDENT");
+
+    const enroll = await enrollStudent({ studentId: excludedStudent.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enroll.status !== "enrolled") throw new Error("Expected enrolled");
+    createdEnrollmentIds.push(enroll.enrollment.id);
+
+    await prisma.moduleEnrollmentException.create({
+      data: {
+        enrollmentId: enroll.enrollment.id,
+        moduleOfferingId: moduleOffering.id,
+        exceptionType: "EXCLUDE",
+        reason: "Excluded from module",
+        createdById: admin.id,
+      },
+    });
+
+    const csv = await exportAttendanceCSV({ moduleOfferingId: moduleOffering.id, requestedById: educator.id });
+
+    const lines = csv.split("\n");
+    const dataLines = lines.slice(1).filter((l) => l.trim());
+    expect(dataLines.some((l) => l.includes(excludedStudent.generatedIdentifier))).toBe(false);
+  });
+
+  it("student cannot export attendance CSV", async () => {
+    const { moduleOffering, students } = await setupModuleOfferingWithAttendance();
+
+    await expect(
+      exportAttendanceCSV({ moduleOfferingId: moduleOffering.id, requestedById: students[0].id })
+    ).rejects.toThrow(/educator or administrator/i);
+  });
+
+  it("administrator can export attendance CSV", async () => {
+    const { moduleOffering, admin } = await setupModuleOfferingWithAttendance();
+
+    const csv = await exportAttendanceCSV({ moduleOfferingId: moduleOffering.id, requestedById: admin.id });
+
+    const lines = csv.split("\n");
+    expect(lines[0]).toContain("Student Identifier");
+    expect(lines).toHaveLength(3);
   });
 });
