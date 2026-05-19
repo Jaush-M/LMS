@@ -1,5 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { calculateEffectiveModuleAccess, enrollStudent, createModuleEnrollmentException, setMainEnrollment } from "./enrollment";
+import {
+  calculateEffectiveModuleAccess,
+  enrollStudent,
+  createModuleEnrollmentException,
+  setMainEnrollment,
+  previewEnrollmentCsvImport,
+  commitEnrollmentCsvImport,
+} from "./enrollment";
 import { createFaculty, createCourse, createModule, createIntake, createStudyMode } from "./catalogue";
 import { createCurriculumTemplate, addAcademicLevel, addTemplateModule } from "./curriculum-template";
 import { createCourseOfferingFromTemplate } from "./course-offering";
@@ -311,6 +318,151 @@ describe("enrollStudent", () => {
   });
 });
 
+// ── CSV enrollment import ───────────────────────────────────────────────────
+
+describe("previewEnrollmentCsvImport", () => {
+  afterEach(cleanup);
+
+  it("previews valid rows and validation errors without creating enrollments", async () => {
+    const { offering } = await createOfferingSetup(["Programming"]);
+    const student = await createTestUserAccount("STUDENT");
+
+    const preview = await previewEnrollmentCsvImport({
+      courseOfferingId: offering.id,
+      csvText: [
+        "Student Identifier,Institutional Email,Name",
+        `${student.generatedIdentifier},,Existing Student`,
+        ",not-an-email,Bad Email",
+        ",,Missing Identifier",
+      ].join("\n"),
+    });
+
+    expect(preview.totalRows).toBe(3);
+    expect(preview.validRows).toEqual([
+      {
+        rowNumber: 2,
+        studentIdentifier: student.generatedIdentifier,
+        institutionalEmail: student.institutionalEmail,
+        name: "Existing Student",
+        action: "match_existing",
+        studentId: student.id,
+      },
+    ]);
+    expect(preview.invalidRows).toEqual([
+      {
+        rowNumber: 3,
+        studentIdentifier: null,
+        institutionalEmail: "not-an-email",
+        name: "Bad Email",
+        errors: ["Institutional Email must be a valid email address"],
+      },
+      {
+        rowNumber: 4,
+        studentIdentifier: null,
+        institutionalEmail: null,
+        name: "Missing Identifier",
+        errors: ["Student Identifier or Institutional Email is required"],
+      },
+    ]);
+
+    await expect(prisma.enrollment.count({ where: { courseOfferingId: offering.id } })).resolves.toBe(0);
+  });
+
+  it("matches by Institutional Email, rejects duplicate enrollment, and previews optional account creation", async () => {
+    const { offering } = await createOfferingSetup(["Programming"]);
+    const enrolledStudent = await createTestUserAccount("STUDENT");
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const enrollment = await enrollStudent({
+      studentId: enrolledStudent.id,
+      courseOfferingId: offering.id,
+      enrolledById: admin.id,
+    });
+    if (enrollment.status !== "enrolled") throw new Error("Expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    const preview = await previewEnrollmentCsvImport({
+      courseOfferingId: offering.id,
+      createMissingAccounts: true,
+      csvText: [
+        "Student Identifier,Institutional Email,Name",
+        `,${enrolledStudent.institutionalEmail.toUpperCase()},Already Enrolled`,
+        ",new.student@example.edu.mv,New Student",
+      ].join("\n"),
+    });
+
+    expect(preview.validRows).toEqual([
+      {
+        rowNumber: 3,
+        studentIdentifier: null,
+        institutionalEmail: "new.student@example.edu.mv",
+        name: "New Student",
+        action: "create_account",
+        studentId: null,
+      },
+    ]);
+    expect(preview.invalidRows).toEqual([
+      {
+        rowNumber: 2,
+        studentIdentifier: null,
+        institutionalEmail: enrolledStudent.institutionalEmail.toLowerCase(),
+        name: "Already Enrolled",
+        errors: ["Student is already enrolled in this Course Offering"],
+      },
+    ]);
+  });
+});
+
+describe("commitEnrollmentCsvImport", () => {
+  afterEach(cleanup);
+
+  it("enrolls matched Students, creates missing Student accounts when allowed, and skips invalid rows", async () => {
+    const { offering } = await createOfferingSetup(["Programming"]);
+    const existingStudent = await createTestUserAccount("STUDENT");
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+
+    const result = await commitEnrollmentCsvImport({
+      courseOfferingId: offering.id,
+      enrolledById: admin.id,
+      createMissingAccounts: true,
+      csvText: [
+        "Student Identifier,Institutional Email,Name",
+        `${existingStudent.generatedIdentifier},,Existing Student`,
+        ",new.student@example.edu.mv,New Student",
+        ",invalid-email,Invalid Student",
+      ].join("\n"),
+    });
+    createdEnrollmentIds.push(...result.enrolledRows.map((row) => row.enrollmentId));
+    createdUserIds.push(...result.createdAccounts.map((account) => account.userId));
+
+    expect(result.enrolledRows).toHaveLength(2);
+    expect(result.enrolledRows.map((row) => row.rowNumber)).toEqual([2, 3]);
+    expect(result.createdAccounts).toHaveLength(1);
+    expect(result.createdAccounts[0]).toMatchObject({
+      rowNumber: 3,
+      name: "New Student",
+      role: "STUDENT",
+    });
+    expect(result.skippedRows).toEqual([
+      {
+        rowNumber: 4,
+        studentIdentifier: null,
+        institutionalEmail: "invalid-email",
+        name: "Invalid Student",
+        errors: ["Institutional Email must be a valid email address"],
+      },
+    ]);
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: { courseOfferingId: offering.id },
+      include: { student: true },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(enrollments).toHaveLength(2);
+    expect(enrollments.map((enrollment) => enrollment.studentId)).toContain(existingStudent.id);
+    expect(enrollments.map((enrollment) => enrollment.student.role)).toEqual(["STUDENT", "STUDENT"]);
+  });
+});
+
 // ── createModuleEnrollmentException ─────────────────────────────────────────
 
 describe("createModuleEnrollmentException", () => {
@@ -389,7 +541,7 @@ describe("createModuleEnrollmentException", () => {
 
   it("rejects an exception whose module offering belongs to a different course offering", async () => {
     const { offering: offering1 } = await createOfferingSetup(["Programming"]);
-    const { offering: offering2, moduleOfferings: otherModuleOfferings } = await createOfferingSetup(["Databases"]);
+    const { moduleOfferings: otherModuleOfferings } = await createOfferingSetup(["Databases"]);
     const student = await createTestUserAccount("STUDENT");
     const admin = await createTestUserAccount("ADMINISTRATOR");
 

@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import type { SystemSettings } from "./generated/prisma/models/SystemSettings";
+import type { SystemSettings } from "./generated/prisma/client";
 
 export type { SystemSettings };
 
