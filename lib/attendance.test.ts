@@ -3,7 +3,7 @@ import { submitAttendance, getAttendanceForSession, getStudentAttendancePercenta
 import { createClassSession } from "./class-sessions";
 import { createFaculty, createCourse, createModule, createIntake, createStudyMode } from "./catalogue";
 import { createCurriculumTemplate, addAcademicLevel, addTemplateModule } from "./curriculum-template";
-import { createCourseOfferingFromTemplate } from "./course-offering";
+import { createCourseOfferingFromTemplate, archiveCourseOffering } from "./course-offering";
 import { enrollStudent } from "./enrollment";
 import { prisma } from "./prisma";
 import type { UserRole } from "./generated/prisma/enums";
@@ -1304,5 +1304,131 @@ describe("exportAttendanceCSV", () => {
     const lines = csv.split("\n");
     expect(lines[0]).toContain("Student Identifier");
     expect(lines).toHaveLength(3);
+  });
+});
+
+// ── archived course offering read-only enforcement ──────────────────────────
+
+describe("archived course offering read-only enforcement", () => {
+  afterEach(cleanup);
+
+  function setupFinishedOffering() {
+    return (async () => {
+      const faculty = await createFaculty({ name: `Faculty ${uid("F")}` });
+      createdFacultyIds.push(faculty.id);
+      const course = await createCourse({
+        code: uid("CRS"),
+        name: "Software Engineering",
+        awardLevel: "DEGREE",
+        facultyId: faculty.id,
+      });
+      createdCourseIds.push(course.id);
+      const intake = await createIntake({ name: `Sep ${uid("I")}` });
+      createdIntakeIds.push(intake.id);
+      const studyMode = await createStudyMode({ name: `Blended ${uid("SM")}` });
+      createdStudyModeIds.push(studyMode.id);
+
+      const settings = await prisma.systemSettings.create({ data: {} });
+      createdSystemSettingsId = settings.id;
+
+      const template = await createCurriculumTemplate(course.id);
+      createdTemplateIds.push(template.id);
+      const level = await addAcademicLevel(template.id, { label: "Year 1", sortOrder: 1 });
+
+      const educator = await createTestUserAccount("EDUCATOR");
+      const mod = await createModule({ code: uid("MOD"), name: "Programming" });
+      createdModuleIds.push(mod.id);
+      const templateModule = await addTemplateModule(template.id, { academicLevelId: level.id, moduleId: mod.id, credits: 15, sortOrder: 1 });
+
+      const admin = await createTestUserAccount("ADMINISTRATOR");
+
+      const offering = await createCourseOfferingFromTemplate({
+        curriculumTemplateId: template.id,
+        intakeId: intake.id,
+        studyModeId: studyMode.id,
+        name: `Past Offering ${uid("CO")}`,
+        startAt: new Date("2025-09-01T00:00:00.000Z"),
+        finishAt: new Date("2026-01-31T00:00:00.000Z"),
+        moduleOfferings: [{ templateModuleId: templateModule.id, primaryEducatorId: educator.id }],
+      });
+      createdCourseOfferingIds.push(offering.id);
+
+      const student = await createTestUserAccount("STUDENT");
+      const enroll = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+      if (enroll.status !== "enrolled") throw new Error("Expected enrolled");
+      createdEnrollmentIds.push(enroll.enrollment.id);
+
+      const moduleOffering = await prisma.moduleOffering.findFirstOrThrow({ where: { courseOfferingId: offering.id } });
+
+      const sessionType = await createSessionType();
+      const session = await createClassSession({
+        moduleOfferingId: moduleOffering.id,
+        sessionTypeId: sessionType.id,
+        startAt: new Date("2025-10-01T09:00:00.000Z"),
+        finishAt: new Date("2025-10-01T11:00:00.000Z"),
+        createdById: admin.id,
+      });
+      createdClassSessionIds.push(session.session.id);
+
+      return { moduleOffering, educator, admin, student, session: session.session, offering };
+    })();
+  }
+
+  it("educator cannot submit attendance for an archived course offering outside the marking window", async () => {
+    const { educator, student, session, offering } = await setupFinishedOffering();
+
+    const firstSubmit = new Date("2025-10-01T10:00:00.000Z");
+    const firstResult = await submitAttendance({
+      classSessionId: session.id,
+      educatorId: educator.id,
+      submittedAt: firstSubmit,
+      attendanceEntries: [{ studentId: student.id, status: "PRESENT" }],
+    });
+    for (const record of firstResult.attendanceRecords) createdAttendanceRecordIds.push(record.id);
+    createdEducatorAttendanceIds.push(firstResult.educatorAttendance.id);
+
+    await prisma.courseOffering.update({ where: { id: offering.id }, data: { status: "ARCHIVED" } });
+
+    const afterWindow = new Date("2026-03-01T10:00:00.000Z");
+
+    await expect(
+      submitAttendance({
+        classSessionId: session.id,
+        educatorId: educator.id,
+        submittedAt: afterWindow,
+        attendanceEntries: [{ studentId: student.id, status: "ABSENT" }],
+      })
+    ).rejects.toThrow(/read-only/i);
+  });
+
+  it("educator can submit attendance for an archived course offering within the marking window", async () => {
+    const { educator, student, session, offering } = await setupFinishedOffering();
+
+    const firstSubmit = new Date("2025-10-01T10:00:00.000Z");
+    const firstResult = await submitAttendance({
+      classSessionId: session.id,
+      educatorId: educator.id,
+      submittedAt: firstSubmit,
+      attendanceEntries: [{ studentId: student.id, status: "PRESENT" }],
+    });
+    for (const record of firstResult.attendanceRecords) createdAttendanceRecordIds.push(record.id);
+    createdEducatorAttendanceIds.push(firstResult.educatorAttendance.id);
+
+    await prisma.courseOffering.update({ where: { id: offering.id }, data: { status: "ARCHIVED" } });
+
+    const withinWindow = new Date("2026-02-10T10:00:00.000Z");
+
+    const result = await submitAttendance({
+      classSessionId: session.id,
+      educatorId: educator.id,
+      submittedAt: withinWindow,
+      attendanceEntries: [{ studentId: student.id, status: "ABSENT" }],
+    });
+
+    for (const record of result.attendanceRecords) createdAttendanceRecordIds.push(record.id);
+    createdEducatorAttendanceIds.push(result.educatorAttendance.id);
+
+    expect(result.attendanceRecords).toHaveLength(1);
+    expect(result.attendanceRecords[0].status).toBe("ABSENT");
   });
 });

@@ -145,3 +145,121 @@ export async function createCourseOfferingFromTemplate(params: CreateCourseOffer
     });
   });
 }
+
+type ArchiveCourseOfferingInput = {
+  courseOfferingId: string;
+  archivedById: string;
+};
+
+type ArchiveCourseOfferingResult = {
+  id: string;
+  status: string;
+};
+
+export async function archiveCourseOffering(input: ArchiveCourseOfferingInput): Promise<ArchiveCourseOfferingResult> {
+  const actor = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.archivedById } });
+  if (actor.role !== "ADMINISTRATOR" && actor.role !== "SUPER_ADMINISTRATOR") {
+    throw new Error("Only an Administrator can archive a Course Offering");
+  }
+
+  const offering = await prisma.courseOffering.findUniqueOrThrow({
+    where: { id: input.courseOfferingId },
+    include: { moduleOfferings: { include: { moduleGroupChat: true } } },
+  });
+
+  if (offering.status === "ARCHIVED") {
+    throw new Error("Course Offering is already archived");
+  }
+
+  const now = new Date();
+  if (now < offering.finishAt) {
+    throw new Error("Course Offering is not finished and cannot be archived");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await tx.moduleOffering.updateMany({
+      where: { courseOfferingId: input.courseOfferingId },
+      data: { status: "ARCHIVED" },
+    });
+
+    for (const mo of offering.moduleOfferings) {
+      if (mo.moduleGroupChat && !mo.moduleGroupChat.isReadOnly) {
+        await tx.moduleGroupChat.update({
+          where: { id: mo.moduleGroupChat.id },
+          data: { isReadOnly: true },
+        });
+      }
+    }
+
+    await tx.auditLogEntry.create({
+      data: {
+        eventType: "OPERATIONAL",
+        action: "COURSE_OFFERING_ARCHIVED",
+        actorId: input.archivedById,
+        entityType: "CourseOffering",
+        entityId: input.courseOfferingId,
+        beforeJson: JSON.stringify({ status: offering.status, finishAt: offering.finishAt }),
+        afterJson: JSON.stringify({ status: "ARCHIVED" }),
+      },
+    });
+
+    const updated = await tx.courseOffering.update({
+      where: { id: input.courseOfferingId },
+      data: { status: "ARCHIVED" },
+    });
+
+    return {
+      id: updated.id,
+      status: updated.status,
+    };
+  });
+}
+
+export async function isInMarkingWindow(courseOfferingId: string, now: Date = new Date()): Promise<boolean> {
+  const settings = await prisma.systemSettings.findFirstOrThrow();
+  const windowDays = settings.postCourseMarkingWindowDays;
+
+  const offering = await prisma.courseOffering.findUniqueOrThrow({
+    where: { id: courseOfferingId },
+    select: { finishAt: true },
+  });
+
+  const windowEnd = new Date(offering.finishAt.getTime() + windowDays * 24 * 60 * 60 * 1000);
+
+  return now >= offering.finishAt && now <= windowEnd;
+}
+
+type BulkArchiveCourseOfferingResult = {
+  courseOfferingId: string;
+  archived: boolean;
+  error?: string;
+};
+
+type BulkArchiveCourseOfferingsInput = {
+  courseOfferingIds: string[];
+  archivedById: string;
+};
+
+export async function bulkArchiveCourseOfferings(input: BulkArchiveCourseOfferingsInput): Promise<BulkArchiveCourseOfferingResult[]> {
+  const actor = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.archivedById } });
+  if (actor.role !== "ADMINISTRATOR" && actor.role !== "SUPER_ADMINISTRATOR") {
+    throw new Error("Only an Administrator can archive Course Offerings");
+  }
+
+  const results: BulkArchiveCourseOfferingResult[] = [];
+
+  for (const courseOfferingId of input.courseOfferingIds) {
+    try {
+      await archiveCourseOffering({ courseOfferingId, archivedById: input.archivedById });
+      results.push({ courseOfferingId, archived: true });
+    } catch (error) {
+      results.push({
+        courseOfferingId,
+        archived: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  return results;
+}

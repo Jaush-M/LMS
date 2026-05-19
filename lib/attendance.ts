@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { calculateEffectiveModuleAccess } from "./enrollment";
+import { isInMarkingWindow } from "./course-offering";
 
 type AttendanceEntry = {
   studentId: string;
@@ -65,7 +66,15 @@ export async function submitAttendance(input: SubmitAttendanceInput): Promise<Su
     include: { moduleOffering: true },
   });
 
-  if (await isAttendanceLocked(input.classSessionId, input.submittedAt)) {
+  const courseOffering = await prisma.courseOffering.findUniqueOrThrow({
+    where: { id: session.moduleOffering.courseOfferingId },
+  });
+  const inMarkingWindow = courseOffering.status === "ARCHIVED" && await isInMarkingWindow(courseOffering.id, input.submittedAt);
+  if (courseOffering.status === "ARCHIVED" && !inMarkingWindow) {
+    throw new Error("Course Offering is archived and read-only");
+  }
+
+  if (!inMarkingWindow && await isAttendanceLocked(input.classSessionId, input.submittedAt)) {
     throw new Error("Attendance is locked for this Class Session");
   }
 
