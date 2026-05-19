@@ -347,6 +347,68 @@ export async function listFinalGrades(input: ListFinalGradesInput) {
   });
 }
 
+// ── correctFinalGrade ─────────────────────────────────────────────────────────
+
+export type CorrectFinalGradeInput = {
+  finalGradeId: string;
+  correctedById: string;
+  percentage: number;
+  reason: string;
+};
+
+export async function correctFinalGrade(input: CorrectFinalGradeInput) {
+  const actor = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.correctedById } });
+
+  if (actor.role !== "ADMINISTRATOR" && actor.role !== "SUPER_ADMINISTRATOR") {
+    throw new Error("Permission denied: only Administrators may correct Final Grades");
+  }
+
+  if (!input.reason.trim()) {
+    throw new Error("A reason is required to correct a Final Grade");
+  }
+
+  const grade = await prisma.finalGrade.findUniqueOrThrow({ where: { id: input.finalGradeId } });
+
+  if (grade.status !== "RELEASED") {
+    throw new Error("Only Released Final Grades may be corrected");
+  }
+
+  const settings = await prisma.systemSettings.findFirst({ orderBy: { updatedAt: "desc" } });
+  const passThreshold = settings?.passThresholdPercent ?? 50;
+  const isPassing = input.percentage >= passThreshold;
+
+  return prisma.$transaction(async (tx) => {
+    const corrected = await tx.finalGrade.update({
+      where: { id: input.finalGradeId },
+      data: { percentage: input.percentage, isPassing },
+    });
+
+    await tx.auditLogEntry.create({
+      data: {
+        eventType: "OPERATIONAL",
+        action: "FINAL_GRADE_CORRECTED",
+        actorId: input.correctedById,
+        entityType: "FinalGrade",
+        entityId: input.finalGradeId,
+        beforeJson: JSON.stringify({ percentage: grade.percentage, isPassing: grade.isPassing }),
+        afterJson: JSON.stringify({ percentage: input.percentage, isPassing }),
+        reason: input.reason,
+      },
+    });
+
+    await tx.notification.create({
+      data: {
+        recipientId: grade.studentId,
+        sourceType: "FINAL_GRADE",
+        finalGradeId: input.finalGradeId,
+        title: "Your Final Grade has been corrected",
+      },
+    });
+
+    return corrected;
+  });
+}
+
 // ── exportMarksCSV ────────────────────────────────────────────────────────────
 
 export type ExportMarksCSVInput = {

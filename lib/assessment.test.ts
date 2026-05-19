@@ -9,6 +9,7 @@ import {
   releaseFinalGrades,
   listFinalGrades,
   exportMarksCSV,
+  correctFinalGrade,
 } from "./assessment";
 import { createFaculty, createCourse, createModule, createIntake, createStudyMode } from "./catalogue";
 import { createCurriculumTemplate, addAcademicLevel, addTemplateModule } from "./curriculum-template";
@@ -39,6 +40,9 @@ async function cleanup() {
     createdEnrollmentIds.length = 0;
   }
   if (createdFinalGradeIds.length) {
+    await prisma.auditLogEntry.deleteMany({
+      where: { entityType: "FinalGrade", entityId: { in: [...createdFinalGradeIds] } },
+    });
     await prisma.finalGrade.deleteMany({ where: { id: { in: [...createdFinalGradeIds] } } });
     createdFinalGradeIds.length = 0;
   }
@@ -661,5 +665,216 @@ describe("exportMarksCSV", () => {
     // 40/50×40 + 80/100×60 = 32 + 48 = 80%
     expect(lines[1]).toContain("80.00");
     expect(lines[1]).toContain("Pass");
+  });
+});
+
+// ── correctFinalGrade ─────────────────────────────────────────────────────────
+
+describe("correctFinalGrade", () => {
+  it("Administrator corrects a Released Final Grade — new percentage is stored", async () => {
+    const { moduleOfferings } = await createOfferingSetup(["Machine Learning"]);
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    await createSystemSettings(50);
+
+    const grade = await prisma.finalGrade.create({
+      data: {
+        moduleOfferingId: moduleOfferings[0].id,
+        studentId: student.id,
+        percentage: 45,
+        isPassing: false,
+        status: "RELEASED",
+        releasedById: admin.id,
+      },
+    });
+    createdFinalGradeIds.push(grade.id);
+
+    const corrected = await correctFinalGrade({
+      finalGradeId: grade.id,
+      correctedById: admin.id,
+      percentage: 55,
+      reason: "Marking error on question 3",
+    });
+
+    expect(corrected.percentage).toBeCloseTo(55, 5);
+  });
+
+  it("isPassing is recalculated from the system pass threshold after correction", async () => {
+    const { moduleOfferings } = await createOfferingSetup(["Computer Networks"]);
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    await createSystemSettings(60);
+
+    const grade = await prisma.finalGrade.create({
+      data: {
+        moduleOfferingId: moduleOfferings[0].id,
+        studentId: student.id,
+        percentage: 45,
+        isPassing: false,
+        status: "RELEASED",
+        releasedById: admin.id,
+      },
+    });
+    createdFinalGradeIds.push(grade.id);
+
+    // 59% is below 60% threshold → still failing
+    const belowThreshold = await correctFinalGrade({
+      finalGradeId: grade.id,
+      correctedById: admin.id,
+      percentage: 59,
+      reason: "Recalculation after exam review",
+    });
+    expect(belowThreshold.isPassing).toBe(false);
+
+    // 60% meets threshold → passing
+    const atThreshold = await correctFinalGrade({
+      finalGradeId: grade.id,
+      correctedById: admin.id,
+      percentage: 60,
+      reason: "Recalculation after exam review",
+    });
+    expect(atThreshold.isPassing).toBe(true);
+  });
+
+  it("Correction creates an OPERATIONAL audit log entry with beforeJson, afterJson, and reason", async () => {
+    const { moduleOfferings } = await createOfferingSetup(["Operating Systems"]);
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    await createSystemSettings(50);
+
+    const grade = await prisma.finalGrade.create({
+      data: {
+        moduleOfferingId: moduleOfferings[0].id,
+        studentId: student.id,
+        percentage: 48,
+        isPassing: false,
+        status: "RELEASED",
+        releasedById: admin.id,
+      },
+    });
+    createdFinalGradeIds.push(grade.id);
+
+    await correctFinalGrade({
+      finalGradeId: grade.id,
+      correctedById: admin.id,
+      percentage: 52,
+      reason: "Clerical error in final tally",
+    });
+
+    const entry = await prisma.auditLogEntry.findFirst({
+      where: { action: "FINAL_GRADE_CORRECTED", entityId: grade.id },
+    });
+    expect(entry).not.toBeNull();
+    expect(entry!.eventType).toBe("OPERATIONAL");
+    expect(entry!.actorId).toBe(admin.id);
+    expect(entry!.entityType).toBe("FinalGrade");
+    expect(entry!.reason).toBe("Clerical error in final tally");
+    expect(JSON.parse(entry!.beforeJson!)).toMatchObject({ percentage: 48, isPassing: false });
+    expect(JSON.parse(entry!.afterJson!)).toMatchObject({ percentage: 52, isPassing: true });
+  });
+
+  it("Student receives a notification when their Final Grade is corrected", async () => {
+    const { moduleOfferings } = await createOfferingSetup(["Cybersecurity"]);
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    await createSystemSettings(50);
+
+    const grade = await prisma.finalGrade.create({
+      data: {
+        moduleOfferingId: moduleOfferings[0].id,
+        studentId: student.id,
+        percentage: 48,
+        isPassing: false,
+        status: "RELEASED",
+        releasedById: admin.id,
+      },
+    });
+    createdFinalGradeIds.push(grade.id);
+
+    await correctFinalGrade({
+      finalGradeId: grade.id,
+      correctedById: admin.id,
+      percentage: 62,
+      reason: "Script re-marked",
+    });
+
+    const notification = await prisma.notification.findFirst({
+      where: { recipientId: student.id, sourceType: "FINAL_GRADE", finalGradeId: grade.id, title: "Your Final Grade has been corrected" },
+    });
+    expect(notification).not.toBeNull();
+  });
+
+  it("Blank or whitespace reason is rejected", async () => {
+    const { moduleOfferings } = await createOfferingSetup(["Embedded Systems"]);
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    await createSystemSettings(50);
+
+    const grade = await prisma.finalGrade.create({
+      data: {
+        moduleOfferingId: moduleOfferings[0].id,
+        studentId: student.id,
+        percentage: 55,
+        isPassing: true,
+        status: "RELEASED",
+        releasedById: admin.id,
+      },
+    });
+    createdFinalGradeIds.push(grade.id);
+
+    await expect(
+      correctFinalGrade({ finalGradeId: grade.id, correctedById: admin.id, percentage: 60, reason: "   " })
+    ).rejects.toThrow("reason is required");
+  });
+
+  it("Student and Educator cannot correct a Final Grade — permission denied", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Software Testing"]);
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    const educator = educators[0];
+    await createSystemSettings(50);
+
+    const grade = await prisma.finalGrade.create({
+      data: {
+        moduleOfferingId: moduleOfferings[0].id,
+        studentId: student.id,
+        percentage: 70,
+        isPassing: true,
+        status: "RELEASED",
+        releasedById: admin.id,
+      },
+    });
+    createdFinalGradeIds.push(grade.id);
+
+    await expect(
+      correctFinalGrade({ finalGradeId: grade.id, correctedById: student.id, percentage: 80, reason: "Clerical fix" })
+    ).rejects.toThrow("Permission denied");
+
+    await expect(
+      correctFinalGrade({ finalGradeId: grade.id, correctedById: educator.id, percentage: 80, reason: "Clerical fix" })
+    ).rejects.toThrow("Permission denied");
+  });
+
+  it("Correcting a PROVISIONAL Final Grade is rejected", async () => {
+    const { moduleOfferings } = await createOfferingSetup(["Compiler Design"]);
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    await createSystemSettings(50);
+
+    const grade = await prisma.finalGrade.create({
+      data: {
+        moduleOfferingId: moduleOfferings[0].id,
+        studentId: student.id,
+        percentage: 70,
+        isPassing: true,
+        status: "PROVISIONAL",
+        releasedById: admin.id,
+      },
+    });
+    createdFinalGradeIds.push(grade.id);
+
+    await expect(
+      correctFinalGrade({ finalGradeId: grade.id, correctedById: admin.id, percentage: 80, reason: "Clerical fix" })
+    ).rejects.toThrow("Released");
   });
 });
