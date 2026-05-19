@@ -13,7 +13,7 @@ const TEMP_PASSWORD = "TempPass123!";
 async function createAuthUser(params: {
   id: string;
   name: string;
-  email: string;
+  authEmail: string;
   password: string;
 }) {
   const hash = await hashPassword(params.password);
@@ -23,7 +23,7 @@ async function createAuthUser(params: {
     data: {
       id: params.id,
       name: params.name,
-      email: params.email,
+      email: params.authEmail,
       emailVerified: false,
       createdAt: now,
       updatedAt: now,
@@ -43,49 +43,71 @@ async function createAuthUser(params: {
   });
 }
 
-async function main() {
-  const saId = crypto.randomUUID();
-  const inactiveId = crypto.randomUUID();
-
-  // Super Administrator — ACTIVE, must change password
-  await createAuthUser({
-    id: saId,
+const accounts = [
+  {
     name: "Super Administrator",
-    email: "superadmin@lms.local",
-    password: TEMP_PASSWORD,
-  });
-  await prisma.userAccount.create({
-    data: {
-      userId: saId,
-      role: "SUPER_ADMINISTRATOR",
-      generatedIdentifier: "SA001",
-      institutionalEmail: "superadmin@lms.local",
-      status: "ACTIVE",
-      mustChangePassword: true,
-    },
-  });
-
-  // Inactive user — cannot sign in
-  await createAuthUser({
-    id: inactiveId,
+    role: "SUPER_ADMINISTRATOR" as const,
+    generatedIdentifier: "SA000001",
+    institutionalEmail: "SA000001@lms.edu.mv",
+    status: "ACTIVE" as const,
+  },
+  {
+    name: "Administrator",
+    role: "ADMINISTRATOR" as const,
+    generatedIdentifier: "A000001",
+    institutionalEmail: "A000001@lms.edu.mv",
+    status: "ACTIVE" as const,
+  },
+  {
+    name: "Educator",
+    role: "EDUCATOR" as const,
+    generatedIdentifier: "E000001",
+    institutionalEmail: "E000001@lms.edu.mv",
+    status: "ACTIVE" as const,
+  },
+  {
+    name: "Student",
+    role: "STUDENT" as const,
+    generatedIdentifier: "S000001",
+    institutionalEmail: "S000001@lms.edu.mv",
+    status: "ACTIVE" as const,
+  },
+  {
     name: "Inactive Student",
-    email: "inactive@lms.local",
-    password: TEMP_PASSWORD,
-  });
-  await prisma.userAccount.create({
-    data: {
-      userId: inactiveId,
-      role: "STUDENT",
-      generatedIdentifier: "S001",
-      institutionalEmail: "inactive@lms.local",
-      status: "INACTIVE",
-      mustChangePassword: true,
-    },
-  });
+    role: "STUDENT" as const,
+    generatedIdentifier: "S000002",
+    institutionalEmail: "S000002@lms.edu.mv",
+    status: "INACTIVE" as const,
+  },
+];
+
+async function main() {
+  for (const account of accounts) {
+    const id = crypto.randomUUID();
+    await createAuthUser({
+      id,
+      name: account.name,
+      authEmail: account.institutionalEmail.toLowerCase(),
+      password: TEMP_PASSWORD,
+    });
+    await prisma.userAccount.create({
+      data: {
+        userId: id,
+        role: account.role,
+        generatedIdentifier: account.generatedIdentifier,
+        institutionalEmail: account.institutionalEmail,
+        status: account.status,
+        mustChangePassword: true,
+      },
+    });
+  }
 
   console.log("Seed complete");
-  console.log(`Super Administrator: superadmin@lms.local / ${TEMP_PASSWORD}`);
-  console.log(`Inactive student:    inactive@lms.local / ${TEMP_PASSWORD}`);
+  console.log(`Super Administrator: SA000001@lms.edu.mv / ${TEMP_PASSWORD}`);
+  console.log(`Administrator:       A000001@lms.edu.mv / ${TEMP_PASSWORD}`);
+  console.log(`Educator:            E000001@lms.edu.mv / ${TEMP_PASSWORD}`);
+  console.log(`Student:             S000001@lms.edu.mv / ${TEMP_PASSWORD}`);
+  console.log(`Inactive student:    S000002@lms.edu.mv / ${TEMP_PASSWORD}`);
 }
 
 main()

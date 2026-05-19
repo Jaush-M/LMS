@@ -2,9 +2,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import { CreateAdministratorForm } from "./form";
 
-export default async function SuperAdministratorDashboardPage() {
+export default async function CreateAdministratorPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
 
@@ -19,16 +19,10 @@ export default async function SuperAdministratorDashboardPage() {
 
   return (
     <main className="p-8">
-      <h1 className="text-2xl font-semibold">Super Administrator Dashboard</h1>
-      <p className="mt-2 text-gray-600">Welcome, {session.user.name}</p>
-      <nav className="mt-6 space-x-4">
-        <Link
-          href="/super-administrator/create-administrator"
-          className="text-blue-600 underline"
-        >
-          Create administrator
-        </Link>
-      </nav>
+      <h1 className="text-2xl font-semibold">Create Administrator</h1>
+      <div className="mt-6 max-w-sm">
+        <CreateAdministratorForm />
+      </div>
     </main>
   );
 }
