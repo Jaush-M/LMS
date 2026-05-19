@@ -4,6 +4,8 @@ import {
   publishAssignment,
   unpublishAssignment,
   listAssignments,
+  submitAssignment,
+  listSubmissions,
 } from "./assignments";
 import { enrollStudent } from "./enrollment";
 import { createFaculty, createCourse, createModule, createIntake, createStudyMode } from "./catalogue";
@@ -25,6 +27,7 @@ const createdIntakeIds: string[] = [];
 const createdStudyModeIds: string[] = [];
 const createdUserIds: string[] = [];
 const createdEnrollmentIds: string[] = [];
+const createdFileAssetIds: string[] = [];
 
 async function cleanup() {
   if (createdEnrollmentIds.length) {
@@ -32,8 +35,13 @@ async function cleanup() {
     createdEnrollmentIds.length = 0;
   }
   if (createdAssignmentIds.length) {
+    // submissions cascade-delete with assignments
     await prisma.assignment.deleteMany({ where: { id: { in: [...createdAssignmentIds] } } });
     createdAssignmentIds.length = 0;
+  }
+  if (createdFileAssetIds.length) {
+    await prisma.fileAsset.deleteMany({ where: { id: { in: [...createdFileAssetIds] } } });
+    createdFileAssetIds.length = 0;
   }
   if (createdContentSectionIds.length) {
     await prisma.contentSection.deleteMany({ where: { id: { in: [...createdContentSectionIds] } } });
@@ -87,6 +95,22 @@ async function cleanup() {
 let seq = 0;
 function uniqueCode(prefix: string) {
   return `${prefix}${Date.now()}${++seq}`;
+}
+
+async function createTestFileAsset(uploadedById: string) {
+  const asset = await prisma.fileAsset.create({
+    data: {
+      storageDriver: "local",
+      storageKey: `submission-${uniqueCode("key")}`,
+      originalFilename: "submission.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 1 * 1024 * 1024,
+      category: "SUBMISSION",
+      uploadedById,
+    },
+  });
+  createdFileAssetIds.push(asset.id);
+  return asset;
 }
 
 async function createTestUserAccount(role: UserRole, status: "ACTIVE" | "INACTIVE" | "DISABLED" = "ACTIVE") {
@@ -503,5 +527,246 @@ describe("unpublishAssignment", () => {
 
     const result = await listAssignments({ moduleOfferingId: moduleOfferings[0].id, viewerId: student.id });
     expect(result.some((a) => a.id === assignment.id)).toBe(false);
+  });
+});
+
+// ── listSubmissions ───────────────────────────────────────────────────────────
+
+describe("listSubmissions", () => {
+  afterEach(cleanup);
+
+  it("Educator sees the active submission for each Student on their Assignment", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    const { offering, moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educators[0].id,
+      title: "List Submissions",
+      body: "<p>Submit here.</p>",
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educators[0].id });
+
+    const file1 = await createTestFileAsset(student.id);
+    await submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file1.id });
+    const file2 = await createTestFileAsset(student.id);
+    await submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file2.id });
+
+    const submissions = await listSubmissions({ assignmentId: assignment.id, viewerId: educators[0].id });
+
+    expect(submissions).toHaveLength(1);
+    expect(submissions[0].studentId).toBe(student.id);
+    expect(submissions[0].fileAssetId).toBe(file2.id);
+  });
+});
+
+// ── submitAssignment ──────────────────────────────────────────────────────────
+
+describe("submitAssignment", () => {
+  afterEach(cleanup);
+
+  it("Student submits again before deadline — active submission is replaced, status stays SUBMITTED", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    const { offering, moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educators[0].id,
+      title: "Replace Test",
+      body: "<p>Replace this.</p>",
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educators[0].id });
+
+    const file1 = await createTestFileAsset(student.id);
+    await submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file1.id });
+
+    const file2 = await createTestFileAsset(student.id);
+    const replaced = await submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file2.id });
+
+    expect(replaced.fileAssetId).toBe(file2.id);
+    expect(replaced.status).toBe("SUBMITTED");
+
+    const all = await prisma.assignmentSubmission.findMany({ where: { assignmentId: assignment.id, studentId: student.id } });
+    expect(all).toHaveLength(1);
+  });
+
+  it("Student cannot submit to a Draft (unpublished) Assignment", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    const { offering, moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educators[0].id,
+      title: "Draft Assignment",
+      body: "<p>Not yet published.</p>",
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+
+    const file = await createTestFileAsset(student.id);
+    await expect(
+      submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file.id })
+    ).rejects.toThrow(/published/i);
+  });
+
+  it("Student without Effective Module Access cannot submit", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const outsideStudent = await createTestUserAccount("STUDENT");
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educators[0].id,
+      title: "Access Denied",
+      body: "<p>Not for you.</p>",
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educators[0].id });
+
+    const file = await createTestFileAsset(outsideStudent.id);
+    await expect(
+      submitAssignment({ assignmentId: assignment.id, studentId: outsideStudent.id, fileAssetId: file.id })
+    ).rejects.toThrow(/access/i);
+  });
+
+  it("Marked submission cannot be replaced by the Student", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    const { offering, moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educators[0].id,
+      title: "Marked Submission",
+      body: "<p>Already marked.</p>",
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educators[0].id });
+
+    const file1 = await createTestFileAsset(student.id);
+    await prisma.assignmentSubmission.create({
+      data: { assignmentId: assignment.id, studentId: student.id, fileAssetId: file1.id, status: "MARKED", submittedAt: new Date() },
+    });
+
+    const file2 = await createTestFileAsset(student.id);
+    await expect(
+      submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file2.id })
+    ).rejects.toThrow(/marked/i);
+  });
+
+  it("Student cannot replace a submission after the deadline", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    const { offering, moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educators[0].id,
+      title: "Post-Deadline Replace",
+      body: "<p>Past due.</p>",
+      deadline: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educators[0].id });
+
+    const file1 = await createTestFileAsset(student.id);
+    // Inject an existing SUBMITTED submission (simulating a pre-deadline submission by writing directly)
+    await prisma.assignmentSubmission.create({
+      data: { assignmentId: assignment.id, studentId: student.id, fileAssetId: file1.id, status: "SUBMITTED", submittedAt: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+    });
+
+    const file2 = await createTestFileAsset(student.id);
+    await expect(
+      submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file2.id })
+    ).rejects.toThrow(/deadline/i);
+  });
+
+  it("Student submits after deadline with no prior submission — status is LATE", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    const { offering, moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educators[0].id,
+      title: "Late Submission Test",
+      body: "<p>Overdue.</p>",
+      deadline: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educators[0].id });
+
+    const file = await createTestFileAsset(student.id);
+    const submission = await submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file.id });
+
+    expect(submission.status).toBe("LATE");
+  });
+
+  it("Student with Effective Module Access submits before deadline — status is SUBMITTED", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    const { offering, moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educators[0].id,
+      title: "Submit Test",
+      body: "<p>Submit this.</p>",
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educators[0].id });
+
+    const file = await createTestFileAsset(student.id);
+    const submission = await submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file.id });
+
+    expect(submission.status).toBe("SUBMITTED");
+    expect(submission.assignmentId).toBe(assignment.id);
+    expect(submission.studentId).toBe(student.id);
+    expect(submission.fileAssetId).toBe(file.id);
   });
 });
