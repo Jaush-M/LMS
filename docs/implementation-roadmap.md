@@ -58,20 +58,20 @@ Exit criteria:
 Primary tests:
 - Add unit/integration tests for catalogue validation and template prerequisites.
 
-## Phase 3: Course Offerings, Module Offerings, And Enrolment
+## Phase 3: Course Offerings, Module Offerings, And Enrollment
 
 Goals:
 - Create Course Offerings from Curriculum Templates.
 - Generate Module Offerings, Module Group Chats, and Assessment Components from templates.
 - Assign primary Educators.
 - Implement Course Offering capacity, capacity warnings, and capacity override reason.
-- Implement Enrolments, Main Enrolment, Module Enrolment Exceptions, and Effective Module Access.
-- Implement CSV enrolment import preview and commit.
+- Implement Enrollments, Main Enrollment, Module Enrollment Exceptions, and Effective Module Access.
+- Implement CSV enrollment import preview and commit.
 
 Exit criteria:
 - Administrator can set up a Course Offering with Module Offerings and educators.
 - Students can be enrolled and receive correct Effective Module Access.
-- Capacity override and enrolment changes are audit logged.
+- Capacity override and enrollment changes are audit logged.
 
 Primary tests:
 - TC-003
