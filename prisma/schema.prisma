@@ -90,6 +90,11 @@ model UserAccount {
   updatedAt              DateTime          @updatedAt
   fileAssets             FileAsset[]
   primaryModuleOfferings ModuleOffering[]  @relation("PrimaryEducatorModuleOfferings")
+
+  studentEnrollments              Enrollment[]                @relation("StudentEnrollments")
+  enrolledByEnrollments           Enrollment[]                @relation("EnrolledByEnrollments")
+  createdModuleEnrollmentExceptions ModuleEnrollmentException[] @relation("CreatedModuleEnrollmentExceptions")
+  authorizedCapacityOverrides     CapacityOverride[]          @relation("CapacityOverrides")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -331,6 +336,7 @@ model CourseOffering {
   updatedAt   DateTime       @updatedAt
 
   moduleOfferings ModuleOffering[]
+  enrollments     Enrollment[]
 
   @@unique([courseId, intakeId])
 }
@@ -351,7 +357,8 @@ model ModuleOffering {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  moduleGroupChat ModuleGroupChat?
+  moduleGroupChat             ModuleGroupChat?
+  moduleEnrollmentExceptions  ModuleEnrollmentException[]
 
   @@unique([courseOfferingId, templateModuleId])
 }
@@ -363,4 +370,62 @@ model ModuleGroupChat {
   isReadOnly       Boolean        @default(false)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+}
+
+// ── Enrollment ─────────────────────────────────────────────────────────────
+
+enum EnrollmentStatus {
+  ACTIVE
+  WITHDRAWN
+  COMPLETED
+}
+
+enum ExceptionType {
+  INCLUDE
+  EXCLUDE
+}
+
+model Enrollment {
+  id               String           @id @default(cuid())
+  studentId        String
+  student          UserAccount      @relation("StudentEnrollments", fields: [studentId], references: [id])
+  courseOfferingId String
+  courseOffering   CourseOffering   @relation(fields: [courseOfferingId], references: [id])
+  isMainEnrollment Boolean          @default(false)
+  status           EnrollmentStatus @default(ACTIVE)
+  enrolledById     String
+  enrolledBy       UserAccount      @relation("EnrolledByEnrollments", fields: [enrolledById], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  moduleEnrollmentExceptions ModuleEnrollmentException[]
+  capacityOverride           CapacityOverride?
+
+  @@unique([studentId, courseOfferingId])
+}
+
+model ModuleEnrollmentException {
+  id               String         @id @default(cuid())
+  enrollmentId     String
+  enrollment       Enrollment     @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  moduleOfferingId String
+  moduleOffering   ModuleOffering @relation(fields: [moduleOfferingId], references: [id])
+  exceptionType    ExceptionType
+  reason           String
+  createdById      String
+  createdBy        UserAccount    @relation("CreatedModuleEnrollmentExceptions", fields: [createdById], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([enrollmentId, moduleOfferingId])
+}
+
+model CapacityOverride {
+  id             String     @id @default(cuid())
+  enrollmentId   String     @unique
+  enrollment     Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  reason         String
+  authorizedById String
+  authorizedBy   UserAccount @relation("CapacityOverrides", fields: [authorizedById], references: [id])
+  createdAt      DateTime   @default(now())
 }
