@@ -18,32 +18,32 @@ test.describe("Administrator account management", () => {
     await signIn(page, "A000001@lms.edu.mv");
     await page.goto("/administrator/accounts");
 
-    await expect(page.getByText("S000002@lms.edu.mv")).toBeVisible();
-    await expect(page.getByText("Inactive")).toBeVisible();
+    await expect(page.getByText("S000005@lms.edu.mv")).toBeVisible();
+    await expect(page.getByRole("row", { name: /S000005/ })).toContainText("Inactive");
 
     await page
-      .getByRole("row", { name: /S000002/ })
+      .getByRole("row", { name: /S000005/ })
       .getByRole("button", { name: "Activate" })
       .click();
 
-    await expect(page.getByRole("row", { name: /S000002/ })).toContainText("Active");
+    await expect(page.getByRole("row", { name: /S000005/ })).toContainText("Active");
   });
 
   test("Administrator disables an active Student account", async ({ page }) => {
     await signIn(page, "A000001@lms.edu.mv");
     await page.goto("/administrator/accounts");
 
-    await expect(page.getByText("S000001@lms.edu.mv")).toBeVisible();
+    await expect(page.getByText("S000006@lms.edu.mv")).toBeVisible();
     await expect(
-      page.getByRole("row", { name: /S000001/ }).getByRole("button", { name: "Disable" })
+      page.getByRole("row", { name: /S000006/ }).getByRole("button", { name: "Disable" })
     ).toBeVisible();
 
     await page
-      .getByRole("row", { name: /S000001/ })
+      .getByRole("row", { name: /S000006/ })
       .getByRole("button", { name: "Disable" })
       .click();
 
-    await expect(page.getByRole("row", { name: /S000001/ })).toContainText("Disabled");
+    await expect(page.getByRole("row", { name: /S000006/ })).toContainText("Disabled");
   });
 });
 
