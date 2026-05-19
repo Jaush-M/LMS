@@ -111,6 +111,11 @@ model UserAccount {
   educatorAttendanceRecords       EducatorAttendanceRecord[]  @relation("EducatorAttendanceRecords")
   requestedCorrectionRequests     AttendanceCorrectionRequest[] @relation("RequestedCorrectionRequests")
   resolvedCorrectionRequests      AttendanceCorrectionRequest[] @relation("ResolvedCorrectionRequests")
+  createdAssessmentComponents     AssessmentComponent[]       @relation("CreatedAssessmentComponents")
+  studentComponentMarks           ComponentMark[]             @relation("StudentComponentMarks")
+  markedComponentMarks            ComponentMark[]             @relation("MarkedComponentMarks")
+  studentFinalGrades              FinalGrade[]                @relation("StudentFinalGrades")
+  releasedFinalGrades             FinalGrade[]                @relation("ReleasedFinalGrades")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -389,6 +394,8 @@ model ModuleOffering {
   feedbackPeriod              FeedbackPeriod?
   contentSections             ContentSection[]
   assignments                 Assignment[]
+  assessmentComponents        AssessmentComponent[]
+  finalGrades                 FinalGrade[]
 
   @@unique([courseOfferingId, templateModuleId])
 }
@@ -564,22 +571,28 @@ enum NotificationSourceType {
   ANNOUNCEMENT
   MODULE_CONTENT
   ASSIGNMENT
+  COMPONENT_MARK
+  FINAL_GRADE
 }
 
 model Notification {
-  id              String                 @id @default(cuid())
-  recipientId     String
-  recipient       UserAccount            @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
-  sourceType      NotificationSourceType
-  announcementId  String?
-  announcement    Announcement?          @relation(fields: [announcementId], references: [id])
-  moduleContentId String?
-  moduleContent   ModuleContent?         @relation(fields: [moduleContentId], references: [id])
-  assignmentId    String?
-  assignment      Assignment?            @relation(fields: [assignmentId], references: [id])
-  title           String
-  readAt          DateTime?
-  createdAt       DateTime               @default(now())
+  id               String                 @id @default(cuid())
+  recipientId      String
+  recipient        UserAccount            @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  sourceType       NotificationSourceType
+  announcementId   String?
+  announcement     Announcement?          @relation(fields: [announcementId], references: [id])
+  moduleContentId  String?
+  moduleContent    ModuleContent?         @relation(fields: [moduleContentId], references: [id])
+  assignmentId     String?
+  assignment       Assignment?            @relation(fields: [assignmentId], references: [id])
+  componentMarkId  String?
+  componentMark    ComponentMark?         @relation(fields: [componentMarkId], references: [id])
+  finalGradeId     String?
+  finalGrade       FinalGrade?            @relation(fields: [finalGradeId], references: [id])
+  title            String
+  readAt           DateTime?
+  createdAt        DateTime               @default(now())
 }
 
 // ── Class Sessions ─────────────────────────────────────────────────────────
@@ -779,10 +792,11 @@ model Assignment {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  attachments   AssignmentAttachment[]
-  sharedLinks   AssignmentSharedLink[]
-  notifications Notification[]
-  submissions   AssignmentSubmission[]
+  attachments         AssignmentAttachment[]
+  sharedLinks         AssignmentSharedLink[]
+  notifications       Notification[]
+  submissions         AssignmentSubmission[]
+  assessmentComponent AssessmentComponent?
 }
 
 model AssignmentAttachment {
@@ -822,4 +836,73 @@ model AssignmentSubmission {
   updatedAt    DateTime         @updatedAt
 
   @@unique([assignmentId, studentId])
+}
+
+// ── Assessment Structure and Marking ──────────────────────────────────────────
+
+model AssessmentComponent {
+  id               String                  @id @default(cuid())
+  moduleOfferingId String
+  moduleOffering   ModuleOffering          @relation(fields: [moduleOfferingId], references: [id], onDelete: Cascade)
+  assignmentId     String?                 @unique
+  assignment       Assignment?             @relation(fields: [assignmentId], references: [id])
+  title            String
+  type             AssessmentComponentType
+  weightPercent    Float
+  maximumMark      Float
+  sortOrder        Int
+  createdById      String
+  createdBy        UserAccount             @relation("CreatedAssessmentComponents", fields: [createdById], references: [id])
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  componentMarks ComponentMark[]
+}
+
+enum ComponentMarkStatus {
+  DRAFT
+  RELEASED
+}
+
+model ComponentMark {
+  id                    String               @id @default(cuid())
+  assessmentComponentId String
+  assessmentComponent   AssessmentComponent  @relation(fields: [assessmentComponentId], references: [id], onDelete: Cascade)
+  studentId             String
+  student               UserAccount          @relation("StudentComponentMarks", fields: [studentId], references: [id])
+  score                 Float
+  feedback              String?
+  status                ComponentMarkStatus  @default(DRAFT)
+  markedById            String
+  markedBy              UserAccount          @relation("MarkedComponentMarks", fields: [markedById], references: [id])
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  notifications Notification[]
+
+  @@unique([assessmentComponentId, studentId])
+}
+
+enum FinalGradeStatus {
+  PROVISIONAL
+  RELEASED
+}
+
+model FinalGrade {
+  id               String           @id @default(cuid())
+  moduleOfferingId String
+  moduleOffering   ModuleOffering   @relation(fields: [moduleOfferingId], references: [id], onDelete: Cascade)
+  studentId        String
+  student          UserAccount      @relation("StudentFinalGrades", fields: [studentId], references: [id])
+  percentage       Float
+  isPassing        Boolean
+  status           FinalGradeStatus @default(PROVISIONAL)
+  releasedById     String
+  releasedBy       UserAccount      @relation("ReleasedFinalGrades", fields: [releasedById], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  notifications Notification[]
+
+  @@unique([moduleOfferingId, studentId])
 }
