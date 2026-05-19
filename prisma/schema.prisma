@@ -96,6 +96,8 @@ model UserAccount {
   createdModuleEnrollmentExceptions ModuleEnrollmentException[] @relation("CreatedModuleEnrollmentExceptions")
   authorizedCapacityOverrides     CapacityOverride[]          @relation("CapacityOverrides")
   createdClassSessions            ClassSession[]              @relation("CreatedClassSessions")
+  createdAnnouncements            Announcement[]              @relation("CreatedAnnouncements")
+  receivedNotifications           Notification[]              @relation("ReceivedNotifications")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -239,6 +241,8 @@ model FileAsset {
   status           FileAssetStatus @default(ACTIVE)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+
+  announcementAttachments AnnouncementAttachment[]
 }
 
 // ── Curriculum Templates ───────────────────────────────────────────────────
@@ -339,6 +343,7 @@ model CourseOffering {
 
   moduleOfferings ModuleOffering[]
   enrollments     Enrollment[]
+  announcements   Announcement[]
 
   @@unique([courseId, intakeId])
 }
@@ -362,6 +367,7 @@ model ModuleOffering {
   moduleGroupChat             ModuleGroupChat?
   moduleEnrollmentExceptions  ModuleEnrollmentException[]
   classSessions               ClassSession[]
+  announcements               Announcement[]
 
   @@unique([courseOfferingId, templateModuleId])
 }
@@ -431,6 +437,69 @@ model CapacityOverride {
   authorizedById String
   authorizedBy   UserAccount @relation("CapacityOverrides", fields: [authorizedById], references: [id])
   createdAt      DateTime   @default(now())
+}
+
+// ── Announcements ─────────────────────────────────────────────────────────
+
+enum AnnouncementScope {
+  INSTITUTION
+  COURSE_OFFERING
+  MODULE_OFFERING
+}
+
+model Announcement {
+  id               String            @id @default(cuid())
+  scope            AnnouncementScope
+  courseOfferingId String?
+  courseOffering   CourseOffering?   @relation(fields: [courseOfferingId], references: [id])
+  moduleOfferingId String?
+  moduleOffering   ModuleOffering?   @relation(fields: [moduleOfferingId], references: [id])
+  body             String
+  expiresAt        DateTime?
+  createdById      String
+  createdBy        UserAccount       @relation("CreatedAnnouncements", fields: [createdById], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  attachments   AnnouncementAttachment[]
+  sharedLinks   AnnouncementSharedLink[]
+  notifications Notification[]
+}
+
+model AnnouncementAttachment {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  fileAssetId    String
+  fileAsset      FileAsset    @relation(fields: [fileAssetId], references: [id])
+  createdAt      DateTime     @default(now())
+}
+
+model AnnouncementSharedLink {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  url            String
+  title          String?
+  createdAt      DateTime     @default(now())
+}
+
+// ── Notifications ──────────────────────────────────────────────────────────
+
+enum NotificationSourceType {
+  ANNOUNCEMENT
+}
+
+model Notification {
+  id             String                 @id @default(cuid())
+  recipientId    String
+  recipient      UserAccount            @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  sourceType     NotificationSourceType
+  announcementId String?
+  announcement   Announcement?          @relation(fields: [announcementId], references: [id])
+  title          String
+  readAt         DateTime?
+  createdAt      DateTime               @default(now())
 }
 
 // ── Class Sessions ─────────────────────────────────────────────────────────
