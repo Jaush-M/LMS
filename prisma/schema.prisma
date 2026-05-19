@@ -97,6 +97,9 @@ model UserAccount {
   authorizedCapacityOverrides     CapacityOverride[]          @relation("CapacityOverrides")
   createdClassSessions            ClassSession[]              @relation("CreatedClassSessions")
   createdAnnouncements            Announcement[]              @relation("CreatedAnnouncements")
+  createdInstitutionEvents        InstitutionEvent[]          @relation("CreatedInstitutionEvents")
+  createdCourseOfferingEvents     CourseOfferingEvent[]       @relation("CreatedCourseOfferingEvents")
+  createdModuleOfferingEvents     ModuleOfferingEvent[]       @relation("CreatedModuleOfferingEvents")
   receivedNotifications           Notification[]              @relation("ReceivedNotifications")
   sentChatMessages                ChatMessage[]               @relation("SentChatMessages")
   moderatedChatMessages           ChatMessage[]               @relation("RemovedChatMessages")
@@ -368,9 +371,10 @@ model CourseOffering {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  moduleOfferings ModuleOffering[]
-  enrollments     Enrollment[]
-  announcements   Announcement[]
+  moduleOfferings     ModuleOffering[]
+  enrollments         Enrollment[]
+  announcements       Announcement[]
+  courseOfferingEvents CourseOfferingEvent[]
 
   @@unique([courseId, intakeId])
 }
@@ -400,6 +404,7 @@ model ModuleOffering {
   assignments                 Assignment[]
   assessmentComponents        AssessmentComponent[]
   finalGrades                 FinalGrade[]
+  moduleOfferingEvents        ModuleOfferingEvent[]
 
   @@unique([courseOfferingId, templateModuleId])
 }
@@ -570,6 +575,45 @@ model AnnouncementSharedLink {
   url            String
   title          String?
   createdAt      DateTime     @default(now())
+}
+
+// ── Academic Calendar ─────────────────────────────────────────────────────
+
+model InstitutionEvent {
+  id          String      @id @default(cuid())
+  title       String
+  startAt     DateTime
+  finishAt    DateTime?
+  createdById String
+  createdBy   UserAccount @relation("CreatedInstitutionEvents", fields: [createdById], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model CourseOfferingEvent {
+  id               String         @id @default(cuid())
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  title            String
+  startAt          DateTime
+  finishAt         DateTime?
+  createdById      String
+  createdBy        UserAccount    @relation("CreatedCourseOfferingEvents", fields: [createdById], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model ModuleOfferingEvent {
+  id               String         @id @default(cuid())
+  moduleOfferingId String
+  moduleOffering   ModuleOffering @relation(fields: [moduleOfferingId], references: [id], onDelete: Cascade)
+  title            String
+  startAt          DateTime
+  finishAt         DateTime?
+  createdById      String
+  createdBy        UserAccount    @relation("CreatedModuleOfferingEvents", fields: [createdById], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }
 
 // ── Notifications ──────────────────────────────────────────────────────────
