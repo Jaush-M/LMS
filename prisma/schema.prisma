@@ -106,6 +106,11 @@ model UserAccount {
   createdModuleContent            ModuleContent[]             @relation("CreatedModuleContent")
   createdAssignments              Assignment[]                @relation("CreatedAssignments")
   assignmentSubmissions           AssignmentSubmission[]      @relation("StudentSubmissions")
+  studentAttendanceRecords        AttendanceRecord[]          @relation("StudentAttendanceRecords")
+  submittedAttendanceRecords      AttendanceRecord[]          @relation("SubmittedAttendanceRecords")
+  educatorAttendanceRecords       EducatorAttendanceRecord[]  @relation("EducatorAttendanceRecords")
+  requestedCorrectionRequests     AttendanceCorrectionRequest[] @relation("RequestedCorrectionRequests")
+  resolvedCorrectionRequests      AttendanceCorrectionRequest[] @relation("ResolvedCorrectionRequests")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -211,7 +216,7 @@ model AuditLogEntry {
 model SystemSettings {
   id                                   String   @id @default(cuid())
   defaultReminderPeriodDays            Int      @default(15)
-  attendanceCorrectionWindowDays       Int      @default(7)
+  attendanceCorrectionWindowDays       Int      @default(8)
   passThresholdPercent                 Float    @default(50)
   attendanceRiskThresholdPercent       Float    @default(80)
   postCourseMarkingWindowDays          Int      @default(14)
@@ -579,6 +584,19 @@ model Notification {
 
 // ── Class Sessions ─────────────────────────────────────────────────────────
 
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum CorrectionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model ClassSession {
   id                 String         @id @default(cuid())
   moduleOfferingId   String
@@ -593,6 +611,55 @@ model ClassSession {
   createdBy          UserAccount    @relation("CreatedClassSessions", fields: [createdById], references: [id])
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
+
+  attendanceRecords     AttendanceRecord[]
+  educatorAttendance    EducatorAttendanceRecord?
+}
+
+model AttendanceRecord {
+  id             String           @id @default(cuid())
+  classSessionId String
+  classSession   ClassSession     @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        UserAccount      @relation("StudentAttendanceRecords", fields: [studentId], references: [id])
+  status         AttendanceStatus
+  submittedById  String
+  submittedBy    UserAccount      @relation("SubmittedAttendanceRecords", fields: [submittedById], references: [id])
+  submittedAt    DateTime
+  lockedAt       DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  correctionRequests AttendanceCorrectionRequest[]
+
+  @@unique([classSessionId, studentId])
+}
+
+model EducatorAttendanceRecord {
+  id                     String       @id @default(cuid())
+  classSessionId         String       @unique
+  classSession           ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  educatorId             String
+  educator               UserAccount  @relation("EducatorAttendanceRecords", fields: [educatorId], references: [id])
+  submittedAttendanceAt DateTime
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+}
+
+model AttendanceCorrectionRequest {
+  id                String                  @id @default(cuid())
+  attendanceRecordId String
+  attendanceRecord  AttendanceRecord        @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
+  requestedById     String
+  requestedBy       UserAccount             @relation("RequestedCorrectionRequests", fields: [requestedById], references: [id])
+  requestedStatus   AttendanceStatus
+  reason            String
+  status            CorrectionRequestStatus @default(PENDING)
+  resolvedById      String?
+  resolvedBy        UserAccount?            @relation("ResolvedCorrectionRequests", fields: [resolvedById], references: [id])
+  resolvedAt        DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
 }
 
 // ── Module Feedback ────────────────────────────────────────────────────────
