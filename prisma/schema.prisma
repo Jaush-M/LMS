@@ -104,6 +104,7 @@ model UserAccount {
   submittedFeedbackResponses      FeedbackResponse[]          @relation("SubmittedFeedbackResponses")
   createdContentSections          ContentSection[]            @relation("CreatedContentSections")
   createdModuleContent            ModuleContent[]             @relation("CreatedModuleContent")
+  createdAssignments              Assignment[]                @relation("CreatedAssignments")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -227,6 +228,7 @@ enum FileCategory {
   SUBMISSION
   CONTENT_ATTACHMENT
   ANNOUNCEMENT_ATTACHMENT
+  ASSIGNMENT_ATTACHMENT
 }
 
 enum FileAssetStatus {
@@ -251,6 +253,7 @@ model FileAsset {
   announcementAttachments AnnouncementAttachment[]
   chatMessageAttachments  ChatMessageAttachment[]
   contentAttachments      ContentAttachment[]
+  assignmentAttachments   AssignmentAttachment[]
 }
 
 // ── Curriculum Templates ───────────────────────────────────────────────────
@@ -378,6 +381,7 @@ model ModuleOffering {
   announcements               Announcement[]
   feedbackPeriod              FeedbackPeriod?
   contentSections             ContentSection[]
+  assignments                 Assignment[]
 
   @@unique([courseOfferingId, templateModuleId])
 }
@@ -552,6 +556,7 @@ model AnnouncementSharedLink {
 enum NotificationSourceType {
   ANNOUNCEMENT
   MODULE_CONTENT
+  ASSIGNMENT
 }
 
 model Notification {
@@ -563,6 +568,8 @@ model Notification {
   announcement    Announcement?          @relation(fields: [announcementId], references: [id])
   moduleContentId String?
   moduleContent   ModuleContent?         @relation(fields: [moduleContentId], references: [id])
+  assignmentId    String?
+  assignment      Assignment?            @relation(fields: [assignmentId], references: [id])
   title           String
   readAt          DateTime?
   createdAt       DateTime               @default(now())
@@ -635,7 +642,8 @@ model ContentSection {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  contentItems ModuleContent[]
+  contentItems     ModuleContent[]
+  linkedAssignments Assignment[]
 }
 
 enum ModuleContentStatus {
@@ -677,4 +685,50 @@ model ContentSharedLink {
   url           String
   title         String?
   createdAt     DateTime      @default(now())
+}
+
+// ── Assignments ────────────────────────────────────────────────────────────────
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Assignment {
+  id               String           @id @default(cuid())
+  moduleOfferingId String
+  moduleOffering   ModuleOffering   @relation(fields: [moduleOfferingId], references: [id], onDelete: Cascade)
+  contentSectionId String?
+  contentSection   ContentSection?  @relation(fields: [contentSectionId], references: [id])
+  title            String
+  body             String
+  deadline         DateTime
+  maximumMark      Float
+  status           AssignmentStatus @default(DRAFT)
+  createdById      String
+  createdBy        UserAccount      @relation("CreatedAssignments", fields: [createdById], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  attachments   AssignmentAttachment[]
+  sharedLinks   AssignmentSharedLink[]
+  notifications Notification[]
+}
+
+model AssignmentAttachment {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  fileAssetId  String
+  fileAsset    FileAsset  @relation(fields: [fileAssetId], references: [id])
+  createdAt    DateTime   @default(now())
+}
+
+model AssignmentSharedLink {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  url          String
+  title        String?
+  createdAt    DateTime   @default(now())
 }
