@@ -61,6 +61,71 @@ async function assertCanSend(chatId: string, senderId: string) {
   return chat;
 }
 
+// ── mention parsing and notification dispatch ─────────────────────────────────
+
+function parseMentions(body: string): string[] {
+  const matches = [...body.matchAll(/@(\S+)/g)];
+  return [...new Set(matches.map((m) => m[1]))];
+}
+
+async function getChatParticipantIds(moduleOfferingId: string, primaryEducatorId: string, courseOfferingId: string): Promise<Set<string>> {
+  const ids = new Set<string>([primaryEducatorId]);
+
+  const allModuleOfferings = await prisma.moduleOffering.findMany({
+    where: { courseOfferingId },
+    select: { id: true },
+  });
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { courseOfferingId, status: "ACTIVE" },
+    include: { moduleEnrollmentExceptions: { select: { moduleOfferingId: true, exceptionType: true } } },
+  });
+
+  for (const enrollment of enrollments) {
+    const effective = calculateEffectiveModuleAccess(allModuleOfferings, enrollment.moduleEnrollmentExceptions);
+    if (effective.some((mo) => mo.id === moduleOfferingId)) {
+      ids.add(enrollment.studentId);
+    }
+  }
+
+  return ids;
+}
+
+async function dispatchMentionNotifications(
+  messageId: string,
+  senderId: string,
+  body: string,
+  chat: { moduleOfferingId: string; moduleOffering: { primaryEducatorId: string; courseOfferingId: string } }
+) {
+  const identifiers = parseMentions(body);
+  if (!identifiers.length) return;
+
+  const accounts = await prisma.userAccount.findMany({
+    where: { generatedIdentifier: { in: identifiers } },
+    select: { id: true },
+  });
+  if (!accounts.length) return;
+
+  const participantIds = await getChatParticipantIds(
+    chat.moduleOfferingId,
+    chat.moduleOffering.primaryEducatorId,
+    chat.moduleOffering.courseOfferingId
+  );
+
+  const rows = accounts
+    .filter((a) => a.id !== senderId && participantIds.has(a.id))
+    .map((a) => ({
+      recipientId: a.id,
+      sourceType: "CHAT_MENTION" as const,
+      chatMessageId: messageId,
+      title: "Mention in Module Group Chat",
+    }));
+
+  if (rows.length) {
+    await prisma.notification.createMany({ data: rows });
+  }
+}
+
 // ── sendChatMessage ───────────────────────────────────────────────────────────
 
 export type SendChatMessageInput = {
@@ -72,7 +137,7 @@ export type SendChatMessageInput = {
 };
 
 export async function sendChatMessage(input: SendChatMessageInput) {
-  await assertCanSend(input.chatId, input.senderId);
+  const chat = await assertCanSend(input.chatId, input.senderId);
 
   if (input.fileAssetIds?.length) {
     const assets = await prisma.fileAsset.findMany({
@@ -84,7 +149,7 @@ export async function sendChatMessage(input: SendChatMessageInput) {
     }
   }
 
-  return prisma.chatMessage.create({
+  const message = await prisma.chatMessage.create({
     data: {
       chatId: input.chatId,
       senderId: input.senderId,
@@ -98,6 +163,10 @@ export async function sendChatMessage(input: SendChatMessageInput) {
     },
     include: { sharedLinks: true, attachments: true },
   });
+
+  await dispatchMentionNotifications(message.id, input.senderId, input.body, chat);
+
+  return message;
 }
 
 // ── editChatMessage ───────────────────────────────────────────────────────────
