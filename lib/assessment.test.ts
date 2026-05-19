@@ -10,6 +10,7 @@ import {
   listFinalGrades,
   exportMarksCSV,
   correctFinalGrade,
+  correctComponentMark,
 } from "./assessment";
 import { createFaculty, createCourse, createModule, createIntake, createStudyMode } from "./catalogue";
 import { createCurriculumTemplate, addAcademicLevel, addTemplateModule } from "./curriculum-template";
@@ -599,6 +600,53 @@ describe("releaseFinalGrades — calculation and release", () => {
   });
 });
 
+// ── releaseFinalGrades — released grade protection ────────────────────────────
+
+describe("releaseFinalGrades — released grade protection", () => {
+  it("releaseFinalGrades does not overwrite a grade that is already RELEASED", async () => {
+    const { offering, moduleOfferings, educators } = await createOfferingSetup(["Numerical Methods"]);
+    const educator = educators[0];
+    const moduleOffering = moduleOfferings[0];
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+
+    const enrollResult = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enrollResult.status !== "enrolled") throw new Error("Enrollment failed");
+    createdEnrollmentIds.push(enrollResult.enrollment.id);
+
+    const component = await createAssessmentComponent({
+      moduleOfferingId: moduleOffering.id,
+      createdById: educator.id,
+      title: "Exam",
+      type: "OFFLINE_ASSESSMENT",
+      weightPercent: 100,
+      maximumMark: 100,
+      sortOrder: 1,
+    });
+    createdAssessmentComponentIds.push(component.id);
+
+    const mark = await upsertComponentMark({ assessmentComponentId: component.id, studentId: student.id, markedById: educator.id, score: 65 });
+    createdComponentMarkIds.push(mark.id);
+
+    await createSystemSettings(50);
+
+    // First release — creates the grade at 65%
+    const first = await releaseFinalGrades({ moduleOfferingId: moduleOffering.id, releasedById: educator.id });
+    createdFinalGradeIds.push(...first.map((g) => g.id));
+    expect(first[0].percentage).toBeCloseTo(65, 5);
+
+    // Administrator corrects grade to 80%
+    await correctFinalGrade({ finalGradeId: first[0].id, correctedById: admin.id, percentage: 80, reason: "Marking error" });
+
+    // Educator calls releaseFinalGrades again — corrected grade must not be overwritten
+    const second = await releaseFinalGrades({ moduleOfferingId: moduleOffering.id, releasedById: educator.id });
+    expect(second).toHaveLength(0);
+
+    const grade = await prisma.finalGrade.findUniqueOrThrow({ where: { id: first[0].id } });
+    expect(grade.percentage).toBeCloseTo(80, 5);
+  });
+});
+
 // ── exportMarksCSV ────────────────────────────────────────────────────────────
 
 describe("exportMarksCSV", () => {
@@ -734,6 +782,41 @@ describe("correctFinalGrade", () => {
       reason: "Recalculation after exam review",
     });
     expect(atThreshold.isPassing).toBe(true);
+  });
+
+  it("Correction creates a FinalGradeCorrection row with old/new values, reason, and approvedById", async () => {
+    const { moduleOfferings } = await createOfferingSetup(["Discrete Mathematics"]);
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const student = await createTestUserAccount("STUDENT");
+    await createSystemSettings(50);
+
+    const grade = await prisma.finalGrade.create({
+      data: {
+        moduleOfferingId: moduleOfferings[0].id,
+        studentId: student.id,
+        percentage: 48,
+        isPassing: false,
+        status: "RELEASED",
+        releasedById: admin.id,
+      },
+    });
+    createdFinalGradeIds.push(grade.id);
+
+    await correctFinalGrade({
+      finalGradeId: grade.id,
+      correctedById: admin.id,
+      percentage: 55,
+      reason: "Transcription error corrected",
+    });
+
+    const correction = await prisma.finalGradeCorrection.findFirst({ where: { finalGradeId: grade.id } });
+    expect(correction).not.toBeNull();
+    expect(correction!.oldPercentage).toBeCloseTo(48, 5);
+    expect(correction!.oldIsPassing).toBe(false);
+    expect(correction!.newPercentage).toBeCloseTo(55, 5);
+    expect(correction!.newIsPassing).toBe(true);
+    expect(correction!.reason).toBe("Transcription error corrected");
+    expect(correction!.approvedById).toBe(admin.id);
   });
 
   it("Correction creates an OPERATIONAL audit log entry with beforeJson, afterJson, and reason", async () => {
@@ -875,6 +958,149 @@ describe("correctFinalGrade", () => {
 
     await expect(
       correctFinalGrade({ finalGradeId: grade.id, correctedById: admin.id, percentage: 80, reason: "Clerical fix" })
+    ).rejects.toThrow("Released");
+  });
+});
+
+// ── correctComponentMark ──────────────────────────────────────────────────────
+
+describe("correctComponentMark", () => {
+  it("Educator corrects a Released Component Mark — new score is stored and MarkCorrection row created", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Probability"]);
+    const educator = educators[0];
+    const student = await createTestUserAccount("STUDENT");
+
+    const component = await createAssessmentComponent({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Quiz",
+      type: "OFFLINE_ASSESSMENT",
+      weightPercent: 100,
+      maximumMark: 100,
+      sortOrder: 1,
+    });
+    createdAssessmentComponentIds.push(component.id);
+
+    const mark = await upsertComponentMark({ assessmentComponentId: component.id, studentId: student.id, markedById: educator.id, score: 55 });
+    createdComponentMarkIds.push(mark.id);
+    await releaseComponentMark({ componentMarkId: mark.id, releasedById: educator.id });
+
+    const corrected = await correctComponentMark({
+      componentMarkId: mark.id,
+      correctedById: educator.id,
+      score: 70,
+      reason: "Missed a valid alternative answer",
+    });
+
+    expect(corrected.score).toBe(70);
+    expect(corrected.status).toBe("RELEASED");
+
+    const correction = await prisma.markCorrection.findFirst({ where: { componentMarkId: mark.id } });
+    expect(correction).not.toBeNull();
+    expect(correction!.oldScore).toBe(55);
+    expect(correction!.newScore).toBe(70);
+    expect(correction!.reason).toBe("Missed a valid alternative answer");
+    expect(correction!.correctedById).toBe(educator.id);
+  });
+
+  it("MarkCorrection captures old and new feedback", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Statistics II"]);
+    const educator = educators[0];
+    const student = await createTestUserAccount("STUDENT");
+
+    const component = await createAssessmentComponent({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Assignment",
+      type: "OFFLINE_ASSESSMENT",
+      weightPercent: 100,
+      maximumMark: 100,
+      sortOrder: 1,
+    });
+    createdAssessmentComponentIds.push(component.id);
+
+    const mark = await upsertComponentMark({ assessmentComponentId: component.id, studentId: student.id, markedById: educator.id, score: 60, feedback: "Good work" });
+    createdComponentMarkIds.push(mark.id);
+    await releaseComponentMark({ componentMarkId: mark.id, releasedById: educator.id });
+
+    await correctComponentMark({ componentMarkId: mark.id, correctedById: educator.id, score: 65, feedback: "Excellent work", reason: "Partial credit overlooked" });
+
+    const correction = await prisma.markCorrection.findFirst({ where: { componentMarkId: mark.id } });
+    expect(correction!.oldFeedback).toBe("Good work");
+    expect(correction!.newFeedback).toBe("Excellent work");
+  });
+
+  it("Blank reason is rejected", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Calculus"]);
+    const educator = educators[0];
+    const student = await createTestUserAccount("STUDENT");
+
+    const component = await createAssessmentComponent({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Exam",
+      type: "OFFLINE_ASSESSMENT",
+      weightPercent: 100,
+      maximumMark: 100,
+      sortOrder: 1,
+    });
+    createdAssessmentComponentIds.push(component.id);
+
+    const mark = await upsertComponentMark({ assessmentComponentId: component.id, studentId: student.id, markedById: educator.id, score: 50 });
+    createdComponentMarkIds.push(mark.id);
+    await releaseComponentMark({ componentMarkId: mark.id, releasedById: educator.id });
+
+    await expect(
+      correctComponentMark({ componentMarkId: mark.id, correctedById: educator.id, score: 60, reason: "" })
+    ).rejects.toThrow("reason is required");
+  });
+
+  it("Student cannot correct a Component Mark", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Linear Algebra II"]);
+    const educator = educators[0];
+    const student = await createTestUserAccount("STUDENT");
+
+    const component = await createAssessmentComponent({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Test",
+      type: "OFFLINE_ASSESSMENT",
+      weightPercent: 100,
+      maximumMark: 100,
+      sortOrder: 1,
+    });
+    createdAssessmentComponentIds.push(component.id);
+
+    const mark = await upsertComponentMark({ assessmentComponentId: component.id, studentId: student.id, markedById: educator.id, score: 50 });
+    createdComponentMarkIds.push(mark.id);
+    await releaseComponentMark({ componentMarkId: mark.id, releasedById: educator.id });
+
+    await expect(
+      correctComponentMark({ componentMarkId: mark.id, correctedById: student.id, score: 80, reason: "Self-correction" })
+    ).rejects.toThrow("Permission denied");
+  });
+
+  it("Cannot correct a DRAFT Component Mark — only RELEASED marks can be corrected", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Thermodynamics"]);
+    const educator = educators[0];
+    const student = await createTestUserAccount("STUDENT");
+
+    const component = await createAssessmentComponent({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Lab",
+      type: "OFFLINE_ASSESSMENT",
+      weightPercent: 100,
+      maximumMark: 100,
+      sortOrder: 1,
+    });
+    createdAssessmentComponentIds.push(component.id);
+
+    const mark = await upsertComponentMark({ assessmentComponentId: component.id, studentId: student.id, markedById: educator.id, score: 50 });
+    createdComponentMarkIds.push(mark.id);
+
+    await expect(
+      correctComponentMark({ componentMarkId: mark.id, correctedById: educator.id, score: 60, reason: "Correction" })
     ).rejects.toThrow("Released");
   });
 });
