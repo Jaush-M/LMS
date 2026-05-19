@@ -95,6 +95,7 @@ model UserAccount {
   enrolledByEnrollments           Enrollment[]                @relation("EnrolledByEnrollments")
   createdModuleEnrollmentExceptions ModuleEnrollmentException[] @relation("CreatedModuleEnrollmentExceptions")
   authorizedCapacityOverrides     CapacityOverride[]          @relation("CapacityOverrides")
+  createdClassSessions            ClassSession[]              @relation("CreatedClassSessions")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -167,11 +168,12 @@ model StudyMode {
 }
 
 model SessionType {
-  id        String          @id @default(cuid())
-  name      String
-  status    CatalogueStatus @default(ACTIVE)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id            String          @id @default(cuid())
+  name          String
+  status        CatalogueStatus @default(ACTIVE)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  classSessions ClassSession[]
 }
 
 // ── Audit Log ─────────────────────────────────────────────────────────────
@@ -359,6 +361,7 @@ model ModuleOffering {
 
   moduleGroupChat             ModuleGroupChat?
   moduleEnrollmentExceptions  ModuleEnrollmentException[]
+  classSessions               ClassSession[]
 
   @@unique([courseOfferingId, templateModuleId])
 }
@@ -428,4 +431,22 @@ model CapacityOverride {
   authorizedById String
   authorizedBy   UserAccount @relation("CapacityOverrides", fields: [authorizedById], references: [id])
   createdAt      DateTime   @default(now())
+}
+
+// ── Class Sessions ─────────────────────────────────────────────────────────
+
+model ClassSession {
+  id                 String         @id @default(cuid())
+  moduleOfferingId   String
+  moduleOffering     ModuleOffering @relation(fields: [moduleOfferingId], references: [id], onDelete: Cascade)
+  sessionTypeId      String
+  sessionType        SessionType    @relation(fields: [sessionTypeId], references: [id])
+  startAt            DateTime
+  finishAt           DateTime
+  sessionLocation    String?
+  attendanceRequired Boolean        @default(true)
+  createdById        String
+  createdBy          UserAccount    @relation("CreatedClassSessions", fields: [createdById], references: [id])
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 }
