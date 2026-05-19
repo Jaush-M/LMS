@@ -169,6 +169,102 @@ export async function unpublishAssignment(input: UnpublishAssignmentInput) {
   });
 }
 
+// ── submitAssignment ──────────────────────────────────────────────────────────
+
+export type SubmitAssignmentInput = {
+  assignmentId: string;
+  studentId: string;
+  fileAssetId: string;
+};
+
+export async function submitAssignment(input: SubmitAssignmentInput) {
+  const student = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.studentId } });
+  if (student.role !== "STUDENT") {
+    throw new Error("Permission denied: only Students may submit Assignments");
+  }
+
+  const assignment = await prisma.assignment.findUniqueOrThrow({
+    where: { id: input.assignmentId },
+    include: { moduleOffering: { select: { courseOfferingId: true, id: true } } },
+  });
+
+  if (assignment.status !== "PUBLISHED") {
+    throw new Error("Assignment is not published");
+  }
+
+  const moduleOfferingId = assignment.moduleOfferingId;
+  const courseOfferingId = assignment.moduleOffering.courseOfferingId;
+
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { studentId: input.studentId, courseOfferingId, status: "ACTIVE" },
+    include: { moduleEnrollmentExceptions: { select: { moduleOfferingId: true, exceptionType: true } } },
+  });
+
+  if (!enrollment) {
+    throw new Error("Access denied: Student does not have access to this Module Offering");
+  }
+
+  const allModuleOfferings = await prisma.moduleOffering.findMany({
+    where: { courseOfferingId },
+    select: { id: true },
+  });
+
+  const effective = calculateEffectiveModuleAccess(allModuleOfferings, enrollment.moduleEnrollmentExceptions);
+  if (!effective.some((mo) => mo.id === moduleOfferingId)) {
+    throw new Error("Access denied: Student does not have effective access to this Module Offering");
+  }
+
+  const { validateFileSize } = await import("./storage/validate-file-size");
+  const fileAsset = await prisma.fileAsset.findUniqueOrThrow({ where: { id: input.fileAssetId }, select: { sizeBytes: true } });
+  validateFileSize("SUBMISSION", fileAsset.sizeBytes);
+
+  const existing = await prisma.assignmentSubmission.findUnique({
+    where: { assignmentId_studentId: { assignmentId: input.assignmentId, studentId: input.studentId } },
+  });
+
+  const now = new Date();
+  const isBeforeDeadline = now <= assignment.deadline;
+
+  if (existing) {
+    if (existing.status === "MARKED") {
+      throw new Error("Cannot replace a marked submission");
+    }
+    if (!isBeforeDeadline) {
+      throw new Error("Cannot replace a submission after the deadline");
+    }
+    return prisma.assignmentSubmission.update({
+      where: { id: existing.id },
+      data: { fileAssetId: input.fileAssetId, submittedAt: now, status: "SUBMITTED" },
+    });
+  }
+
+  return prisma.assignmentSubmission.create({
+    data: {
+      assignmentId: input.assignmentId,
+      studentId: input.studentId,
+      fileAssetId: input.fileAssetId,
+      status: isBeforeDeadline ? "SUBMITTED" : "LATE",
+      submittedAt: now,
+    },
+  });
+}
+
+// ── listSubmissions ───────────────────────────────────────────────────────────
+
+export type ListSubmissionsInput = {
+  assignmentId: string;
+  viewerId: string;
+};
+
+export async function listSubmissions(input: ListSubmissionsInput) {
+  await assertAssignmentOwner(input.assignmentId, input.viewerId);
+
+  return prisma.assignmentSubmission.findMany({
+    where: { assignmentId: input.assignmentId },
+    orderBy: { submittedAt: "asc" },
+  });
+}
+
 // ── listAssignments ───────────────────────────────────────────────────────────
 
 export type ListAssignmentsInput = {

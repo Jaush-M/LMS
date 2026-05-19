@@ -105,6 +105,7 @@ model UserAccount {
   createdContentSections          ContentSection[]            @relation("CreatedContentSections")
   createdModuleContent            ModuleContent[]             @relation("CreatedModuleContent")
   createdAssignments              Assignment[]                @relation("CreatedAssignments")
+  assignmentSubmissions           AssignmentSubmission[]      @relation("StudentSubmissions")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -254,6 +255,7 @@ model FileAsset {
   chatMessageAttachments  ChatMessageAttachment[]
   contentAttachments      ContentAttachment[]
   assignmentAttachments   AssignmentAttachment[]
+  assignmentSubmission    AssignmentSubmission?
 }
 
 // ── Curriculum Templates ───────────────────────────────────────────────────
@@ -713,6 +715,7 @@ model Assignment {
   attachments   AssignmentAttachment[]
   sharedLinks   AssignmentSharedLink[]
   notifications Notification[]
+  submissions   AssignmentSubmission[]
 }
 
 model AssignmentAttachment {
@@ -731,4 +734,25 @@ model AssignmentSharedLink {
   url          String
   title        String?
   createdAt    DateTime   @default(now())
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  LATE
+  MARKED
+}
+
+model AssignmentSubmission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      UserAccount      @relation("StudentSubmissions", fields: [studentId], references: [id])
+  fileAssetId  String           @unique
+  fileAsset    FileAsset        @relation(fields: [fileAssetId], references: [id])
+  status       SubmissionStatus
+  submittedAt  DateTime
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([assignmentId, studentId])
 }
