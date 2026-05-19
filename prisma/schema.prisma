@@ -118,6 +118,8 @@ model UserAccount {
   markedComponentMarks            ComponentMark[]             @relation("MarkedComponentMarks")
   studentFinalGrades              FinalGrade[]                @relation("StudentFinalGrades")
   releasedFinalGrades             FinalGrade[]                @relation("ReleasedFinalGrades")
+  approvedFinalGradeCorrections   FinalGradeCorrection[]      @relation("ApprovedFinalGradeCorrections")
+  correctedComponentMarks         MarkCorrection[]            @relation("MarkCorrections")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -897,8 +899,23 @@ model ComponentMark {
   updatedAt             DateTime             @updatedAt
 
   notifications Notification[]
+  corrections   MarkCorrection[]
 
   @@unique([assessmentComponentId, studentId])
+}
+
+model MarkCorrection {
+  id              String        @id @default(cuid())
+  componentMarkId String
+  componentMark   ComponentMark @relation(fields: [componentMarkId], references: [id], onDelete: Cascade)
+  oldScore        Float
+  oldFeedback     String?
+  newScore        Float
+  newFeedback     String?
+  reason          String
+  correctedById   String
+  correctedBy     UserAccount   @relation("MarkCorrections", fields: [correctedById], references: [id])
+  createdAt       DateTime      @default(now())
 }
 
 enum FinalGradeStatus {
@@ -921,6 +938,21 @@ model FinalGrade {
   updatedAt        DateTime         @updatedAt
 
   notifications Notification[]
+  corrections   FinalGradeCorrection[]
 
   @@unique([moduleOfferingId, studentId])
+}
+
+model FinalGradeCorrection {
+  id            String      @id @default(cuid())
+  finalGradeId  String
+  finalGrade    FinalGrade  @relation(fields: [finalGradeId], references: [id], onDelete: Cascade)
+  oldPercentage Float
+  oldIsPassing  Boolean
+  newPercentage Float
+  newIsPassing  Boolean
+  reason        String
+  approvedById  String
+  approvedBy    UserAccount @relation("ApprovedFinalGradeCorrections", fields: [approvedById], references: [id])
+  createdAt     DateTime    @default(now())
 }

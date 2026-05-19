@@ -291,6 +291,11 @@ export async function releaseFinalGrades(input: ReleaseFinalGradesInput) {
 
       const isPassing = percentage >= passThreshold;
 
+      const existing = await tx.finalGrade.findUnique({
+        where: { moduleOfferingId_studentId: { moduleOfferingId: input.moduleOfferingId, studentId } },
+      });
+      if (existing?.status === "RELEASED") continue;
+
       const grade = await tx.finalGrade.upsert({
         where: { moduleOfferingId_studentId: { moduleOfferingId: input.moduleOfferingId, studentId } },
         update: { percentage, isPassing, status: "RELEASED", releasedById: input.releasedById },
@@ -347,6 +352,53 @@ export async function listFinalGrades(input: ListFinalGradesInput) {
   });
 }
 
+// ── correctComponentMark ──────────────────────────────────────────────────────
+
+export type CorrectComponentMarkInput = {
+  componentMarkId: string;
+  correctedById: string;
+  score: number;
+  feedback?: string;
+  reason: string;
+};
+
+export async function correctComponentMark(input: CorrectComponentMarkInput) {
+  const mark = await prisma.componentMark.findUniqueOrThrow({
+    where: { id: input.componentMarkId },
+    include: { assessmentComponent: true },
+  });
+  await assertCanManageAssessmentStructure(mark.assessmentComponent.moduleOfferingId, input.correctedById);
+
+  if (!input.reason.trim()) {
+    throw new Error("A reason is required to correct a Component Mark");
+  }
+
+  if (mark.status !== "RELEASED") {
+    throw new Error("Only Released Component Marks may be corrected");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const corrected = await tx.componentMark.update({
+      where: { id: input.componentMarkId },
+      data: { score: input.score, feedback: input.feedback ?? null, markedById: input.correctedById },
+    });
+
+    await tx.markCorrection.create({
+      data: {
+        componentMarkId: input.componentMarkId,
+        oldScore: mark.score,
+        oldFeedback: mark.feedback ?? null,
+        newScore: input.score,
+        newFeedback: input.feedback ?? null,
+        reason: input.reason,
+        correctedById: input.correctedById,
+      },
+    });
+
+    return corrected;
+  });
+}
+
 // ── correctFinalGrade ─────────────────────────────────────────────────────────
 
 export type CorrectFinalGradeInput = {
@@ -381,6 +433,18 @@ export async function correctFinalGrade(input: CorrectFinalGradeInput) {
     const corrected = await tx.finalGrade.update({
       where: { id: input.finalGradeId },
       data: { percentage: input.percentage, isPassing },
+    });
+
+    await tx.finalGradeCorrection.create({
+      data: {
+        finalGradeId: input.finalGradeId,
+        oldPercentage: grade.percentage,
+        oldIsPassing: grade.isPassing,
+        newPercentage: input.percentage,
+        newIsPassing: isPassing,
+        reason: input.reason,
+        approvedById: input.correctedById,
+      },
     });
 
     await tx.auditLogEntry.create({
