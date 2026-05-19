@@ -223,7 +223,8 @@ export async function submitAssignment(input: SubmitAssignmentInput) {
   });
 
   const now = new Date();
-  const isBeforeDeadline = now <= assignment.deadline;
+  const effectiveDeadline = await getEffectiveDeadline(input.assignmentId);
+  const isBeforeDeadline = now <= effectiveDeadline;
 
   if (existing) {
     if (existing.status === "MARKED") {
@@ -315,4 +316,149 @@ export async function listAssignments(input: ListAssignmentsInput) {
     orderBy: { deadline: "asc" },
     include: { sharedLinks: true, attachments: true },
   });
+}
+
+// ── extendDeadline ────────────────────────────────────────────────────────────
+
+export type ExtendDeadlineInput = {
+  assignmentId: string;
+  extendedById: string;
+  newDeadline: Date;
+  reason: string;
+};
+
+type ExtendDeadlineResult = {
+  extension: {
+    id: string;
+    assignmentId: string;
+    oldDeadline: Date;
+    newDeadline: Date;
+    reason: string;
+    createdById: string;
+    createdAt: Date;
+  };
+  auditEntry: {
+    id: string;
+    entityType: string;
+    entityId: string | null;
+    action: string;
+    actorId: string;
+    reason: string | null;
+  };
+};
+
+export async function extendDeadline(input: ExtendDeadlineInput): Promise<ExtendDeadlineResult> {
+  await assertAssignmentOwner(input.assignmentId, input.extendedById);
+
+  const assignment = await prisma.assignment.findUniqueOrThrow({ where: { id: input.assignmentId } });
+
+  return prisma.$transaction(async (tx) => {
+    const extension = await tx.assignmentDeadlineExtension.create({
+      data: {
+        assignmentId: input.assignmentId,
+        oldDeadline: assignment.deadline,
+        newDeadline: input.newDeadline,
+        reason: input.reason,
+        createdById: input.extendedById,
+      },
+    });
+
+    const auditEntry = await tx.auditLogEntry.create({
+      data: {
+        eventType: "OPERATIONAL",
+        action: "DEADLINE_EXTENDED",
+        actorId: input.extendedById,
+        entityType: "Assignment",
+        entityId: input.assignmentId,
+        beforeJson: JSON.stringify({ deadline: assignment.deadline }),
+        afterJson: JSON.stringify({ deadline: input.newDeadline }),
+        reason: input.reason,
+      },
+    });
+
+    await tx.assignmentSubmission.updateMany({
+      where: {
+        assignmentId: input.assignmentId,
+        status: "LATE",
+        submittedAt: { lte: input.newDeadline },
+      },
+      data: { status: "SUBMITTED" },
+    });
+
+    const moduleOffering = await tx.moduleOffering.findUniqueOrThrow({
+      where: { id: assignment.moduleOfferingId },
+      select: { courseOfferingId: true },
+    });
+
+    const allModuleOfferings = await tx.moduleOffering.findMany({
+      where: { courseOfferingId: moduleOffering.courseOfferingId },
+      select: { id: true },
+    });
+
+    const enrollments = await tx.enrollment.findMany({
+      where: { courseOfferingId: moduleOffering.courseOfferingId, status: "ACTIVE" },
+      select: {
+        studentId: true,
+        moduleEnrollmentExceptions: {
+          select: { moduleOfferingId: true, exceptionType: true },
+        },
+      },
+    });
+
+    const recipientIds = new Set<string>();
+    for (const enrollment of enrollments) {
+      const effective = calculateEffectiveModuleAccess(allModuleOfferings, enrollment.moduleEnrollmentExceptions);
+      if (effective.some((mo) => mo.id === assignment.moduleOfferingId)) {
+        recipientIds.add(enrollment.studentId);
+      }
+    }
+
+    if (recipientIds.size > 0) {
+      await tx.notification.createMany({
+        data: [...recipientIds].map((recipientId) => ({
+          recipientId,
+          sourceType: "ASSIGNMENT" as const,
+          assignmentId: input.assignmentId,
+          title: "Assignment Deadline Extended",
+        })),
+      });
+    }
+
+    return {
+      extension: {
+        id: extension.id,
+        assignmentId: extension.assignmentId,
+        oldDeadline: extension.oldDeadline,
+        newDeadline: extension.newDeadline,
+        reason: extension.reason,
+        createdById: extension.createdById,
+        createdAt: extension.createdAt,
+      },
+      auditEntry: {
+        id: auditEntry.id,
+        entityType: auditEntry.entityType,
+        entityId: auditEntry.entityId,
+        action: auditEntry.action,
+        actorId: auditEntry.actorId,
+        reason: auditEntry.reason,
+      },
+    };
+  });
+}
+
+// ── getEffectiveDeadline ──────────────────────────────────────────────────────
+
+export async function getEffectiveDeadline(assignmentId: string): Promise<Date> {
+  const assignment = await prisma.assignment.findUniqueOrThrow({
+    where: { id: assignmentId },
+    select: { deadline: true },
+  });
+
+  const latestExtension = await prisma.assignmentDeadlineExtension.findFirst({
+    where: { assignmentId },
+    orderBy: { createdAt: "desc" },
+    select: { newDeadline: true },
+  });
+
+  return latestExtension ? latestExtension.newDeadline : assignment.deadline;
 }

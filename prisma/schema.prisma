@@ -106,6 +106,7 @@ model UserAccount {
   createdContentSections          ContentSection[]            @relation("CreatedContentSections")
   createdModuleContent            ModuleContent[]             @relation("CreatedModuleContent")
   createdAssignments              Assignment[]                @relation("CreatedAssignments")
+  createdDeadlineExtensions       AssignmentDeadlineExtension[] @relation("CreatedDeadlineExtensions")
   assignmentSubmissions           AssignmentSubmission[]      @relation("StudentSubmissions")
   studentAttendanceRecords        AttendanceRecord[]          @relation("StudentAttendanceRecords")
   submittedAttendanceRecords      AttendanceRecord[]          @relation("SubmittedAttendanceRecords")
@@ -801,6 +802,7 @@ model Assignment {
   notifications       Notification[]
   submissions         AssignmentSubmission[]
   assessmentComponent AssessmentComponent?
+  deadlineExtensions  AssignmentDeadlineExtension[]
 }
 
 model AssignmentAttachment {
@@ -840,6 +842,18 @@ model AssignmentSubmission {
   updatedAt    DateTime         @updatedAt
 
   @@unique([assignmentId, studentId])
+}
+
+model AssignmentDeadlineExtension {
+  id             String     @id @default(cuid())
+  assignmentId   String
+  assignment     Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  oldDeadline    DateTime
+  newDeadline    DateTime
+  reason         String
+  createdById    String
+  createdBy      UserAccount @relation("CreatedDeadlineExtensions", fields: [createdById], references: [id])
+  createdAt      DateTime   @default(now())
 }
 
 // ── Assessment Structure and Marking ──────────────────────────────────────────

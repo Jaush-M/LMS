@@ -6,6 +6,8 @@ import {
   listAssignments,
   submitAssignment,
   listSubmissions,
+  extendDeadline,
+  getEffectiveDeadline,
 } from "./assignments";
 import { enrollStudent } from "./enrollment";
 import { createFaculty, createCourse, createModule, createIntake, createStudyMode } from "./catalogue";
@@ -28,8 +30,13 @@ const createdStudyModeIds: string[] = [];
 const createdUserIds: string[] = [];
 const createdEnrollmentIds: string[] = [];
 const createdFileAssetIds: string[] = [];
+const createdDeadlineExtensionIds: string[] = [];
 
 async function cleanup() {
+  if (createdDeadlineExtensionIds.length) {
+    await prisma.assignmentDeadlineExtension.deleteMany({ where: { id: { in: [...createdDeadlineExtensionIds] } } });
+    createdDeadlineExtensionIds.length = 0;
+  }
   if (createdEnrollmentIds.length) {
     await prisma.enrollment.deleteMany({ where: { id: { in: [...createdEnrollmentIds] } } });
     createdEnrollmentIds.length = 0;
@@ -768,5 +775,382 @@ describe("submitAssignment", () => {
     expect(submission.assignmentId).toBe(assignment.id);
     expect(submission.studentId).toBe(student.id);
     expect(submission.fileAssetId).toBe(file.id);
+  });
+});
+
+// ── extendDeadline ────────────────────────────────────────────────────────────
+
+describe("extendDeadline", () => {
+  afterEach(cleanup);
+
+  it("educator extends deadline — extension record created and audit logged", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const educator = educators[0];
+
+    const originalDeadline = new Date("2026-12-01T10:00:00.000Z");
+    const extendedDeadline = new Date("2026-12-03T10:00:00.000Z");
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Extended Test",
+      body: "<p>Submit this.</p>",
+      deadline: originalDeadline,
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+
+    const result = await extendDeadline({
+      assignmentId: assignment.id,
+      extendedById: educator.id,
+      newDeadline: extendedDeadline,
+      reason: "Additional time needed",
+    });
+
+    createdDeadlineExtensionIds.push(result.extension.id);
+
+    expect(result.extension.assignmentId).toBe(assignment.id);
+    expect(result.extension.oldDeadline).toEqual(originalDeadline);
+    expect(result.extension.newDeadline).toEqual(extendedDeadline);
+    expect(result.extension.reason).toBe("Additional time needed");
+    expect(result.extension.createdById).toBe(educator.id);
+
+    expect(result.auditEntry.entityType).toBe("Assignment");
+    expect(result.auditEntry.entityId).toBe(assignment.id);
+    expect(result.auditEntry.action).toBe("DEADLINE_EXTENDED");
+    expect(result.auditEntry.actorId).toBe(educator.id);
+    expect(result.auditEntry.reason).toBe("Additional time needed");
+  });
+});
+
+// ── getEffectiveDeadline ──────────────────────────────────────────────────────
+
+describe("getEffectiveDeadline", () => {
+  afterEach(cleanup);
+
+  it("returns base deadline when no extensions exist", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const educator = educators[0];
+
+    const baseDeadline = new Date("2026-12-01T10:00:00.000Z");
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "No Extension",
+      body: "<p>Test.</p>",
+      deadline: baseDeadline,
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+
+    const effective = await getEffectiveDeadline(assignment.id);
+    expect(effective).toEqual(baseDeadline);
+  });
+
+  it("returns latest extended deadline after multiple extensions", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const educator = educators[0];
+
+    const baseDeadline = new Date("2026-12-01T10:00:00.000Z");
+    const firstExtension = new Date("2026-12-03T10:00:00.000Z");
+    const secondExtension = new Date("2026-12-05T10:00:00.000Z");
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Multiple Extensions",
+      body: "<p>Test.</p>",
+      deadline: baseDeadline,
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+
+    const ext1 = await extendDeadline({
+      assignmentId: assignment.id,
+      extendedById: educator.id,
+      newDeadline: firstExtension,
+      reason: "First extension",
+    });
+    createdDeadlineExtensionIds.push(ext1.extension.id);
+
+    const ext2 = await extendDeadline({
+      assignmentId: assignment.id,
+      extendedById: educator.id,
+      newDeadline: secondExtension,
+      reason: "Second extension",
+    });
+    createdDeadlineExtensionIds.push(ext2.extension.id);
+
+    const effective = await getEffectiveDeadline(assignment.id);
+    expect(effective).toEqual(secondExtension);
+  });
+});
+
+// ── submitAssignment with effective deadline ─────────────────────────────────
+
+describe("submitAssignment with extended deadline", () => {
+  afterEach(cleanup);
+
+  it("submission after original deadline but within extension is SUBMITTED, not LATE", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const educator = educators[0];
+    const student = await createTestUserAccount("STUDENT");
+
+    const baseDeadline = new Date("2026-11-15T10:00:00.000Z");
+    const extendedDeadline = new Date("2026-12-01T10:00:00.000Z");
+    const submitTime = new Date("2026-11-20T10:00:00.000Z");
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Extended Deadline Submission",
+      body: "<p>Submit this.</p>",
+      deadline: baseDeadline,
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educator.id });
+
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: moduleOfferings[0].courseOfferingId, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("Expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    await extendDeadline({
+      assignmentId: assignment.id,
+      extendedById: educator.id,
+      newDeadline: extendedDeadline,
+      reason: "Extra time granted",
+    });
+
+    vi.setSystemTime(submitTime);
+    const file = await createTestFileAsset(student.id);
+    const submission = await submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file.id });
+    vi.useRealTimers();
+
+    expect(submission.status).toBe("SUBMITTED");
+  });
+
+  it("extending deadline recalculates LATE submissions to SUBMITTED when within new deadline", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const educator = educators[0];
+    const student = await createTestUserAccount("STUDENT");
+
+    const baseDeadline = new Date("2026-11-15T10:00:00.000Z");
+    const extendedDeadline = new Date("2026-12-01T10:00:00.000Z");
+    const lateSubmissionTime = new Date("2026-11-20T10:00:00.000Z");
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Retroactive Recalculation",
+      body: "<p>Submit this.</p>",
+      deadline: baseDeadline,
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educator.id });
+
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: moduleOfferings[0].courseOfferingId, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("Expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    vi.setSystemTime(lateSubmissionTime);
+    const file = await createTestFileAsset(student.id);
+    const lateSubmission = await submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file.id });
+    vi.useRealTimers();
+
+    expect(lateSubmission.status).toBe("LATE");
+
+    const result = await extendDeadline({
+      assignmentId: assignment.id,
+      extendedById: educator.id,
+      newDeadline: extendedDeadline,
+      reason: "Extra time granted",
+    });
+    createdDeadlineExtensionIds.push(result.extension.id);
+
+    const updated = await prisma.assignmentSubmission.findUniqueOrThrow({ where: { id: lateSubmission.id } });
+    expect(updated.status).toBe("SUBMITTED");
+  });
+
+  it("extending deadline does not change MARKED submissions", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const educator = educators[0];
+    const student = await createTestUserAccount("STUDENT");
+
+    const baseDeadline = new Date("2026-11-15T10:00:00.000Z");
+    const extendedDeadline = new Date("2026-12-01T10:00:00.000Z");
+    const submissionTime = new Date("2026-11-10T10:00:00.000Z");
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Marked Submission Protected",
+      body: "<p>Submit this.</p>",
+      deadline: baseDeadline,
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educator.id });
+
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const enrollment = await enrollStudent({ studentId: student.id, courseOfferingId: moduleOfferings[0].courseOfferingId, enrolledById: admin.id });
+    if (enrollment.status !== "enrolled") throw new Error("Expected enrolled");
+    createdEnrollmentIds.push(enrollment.enrollment.id);
+
+    vi.setSystemTime(submissionTime);
+    const file = await createTestFileAsset(student.id);
+    const submission = await submitAssignment({ assignmentId: assignment.id, studentId: student.id, fileAssetId: file.id });
+    vi.useRealTimers();
+
+    await prisma.assignmentSubmission.update({ where: { id: submission.id }, data: { status: "MARKED" } });
+
+    const result = await extendDeadline({
+      assignmentId: assignment.id,
+      extendedById: educator.id,
+      newDeadline: extendedDeadline,
+      reason: "Extra time granted",
+    });
+    createdDeadlineExtensionIds.push(result.extension.id);
+
+    const updated = await prisma.assignmentSubmission.findUniqueOrThrow({ where: { id: submission.id } });
+    expect(updated.status).toBe("MARKED");
+  });
+});
+
+// ── extendDeadline notifications ──────────────────────────────────────────────
+
+describe("extendDeadline notifications", () => {
+  afterEach(cleanup);
+
+  it("deadline extension notifies students with effective module access", async () => {
+    const { moduleOfferings, educators, offering } = await createOfferingSetup(["Programming"]);
+    const educator = educators[0];
+    const student1 = await createTestUserAccount("STUDENT");
+    const student2 = await createTestUserAccount("STUDENT");
+
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const enroll1 = await enrollStudent({ studentId: student1.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enroll1.status !== "enrolled") throw new Error("Expected enrolled");
+    createdEnrollmentIds.push(enroll1.enrollment.id);
+    const enroll2 = await enrollStudent({ studentId: student2.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (enroll2.status !== "enrolled") throw new Error("Expected enrolled");
+    createdEnrollmentIds.push(enroll2.enrollment.id);
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Notification Test",
+      body: "<p>Test.</p>",
+      deadline: new Date("2026-12-01T10:00:00.000Z"),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+    await publishAssignment({ id: assignment.id, publishedById: educator.id });
+
+    const beforeCount = await prisma.notification.count({
+      where: { assignmentId: assignment.id },
+    });
+
+    const result = await extendDeadline({
+      assignmentId: assignment.id,
+      extendedById: educator.id,
+      newDeadline: new Date("2026-12-05T10:00:00.000Z"),
+      reason: "Extra time granted",
+    });
+    createdDeadlineExtensionIds.push(result.extension.id);
+
+    const afterNotifications = await prisma.notification.findMany({
+      where: { assignmentId: assignment.id, title: "Assignment Deadline Extended" },
+      select: { recipientId: true, title: true },
+    });
+
+    const notifiedIds = afterNotifications.map((n) => n.recipientId);
+    expect(notifiedIds).toContain(student1.id);
+    expect(notifiedIds).toContain(student2.id);
+    expect(afterNotifications).toHaveLength(2);
+  });
+});
+
+// ── extendDeadline permissions ───────────────────────────────────────────────
+
+describe("extendDeadline permissions", () => {
+  afterEach(cleanup);
+
+  it("Student cannot extend deadline", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const educator = educators[0];
+    const student = await createTestUserAccount("STUDENT");
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Permission Test",
+      body: "<p>Test.</p>",
+      deadline: new Date("2026-12-01T10:00:00.000Z"),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+
+    await expect(
+      extendDeadline({
+        assignmentId: assignment.id,
+        extendedById: student.id,
+        newDeadline: new Date("2026-12-05T10:00:00.000Z"),
+        reason: "Should not work",
+      })
+    ).rejects.toThrow(/permission/i);
+  });
+
+  it("Educator not assigned to the Module Offering cannot extend deadline", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const otherEducator = await createTestUserAccount("EDUCATOR");
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educators[0].id,
+      title: "Permission Test",
+      body: "<p>Test.</p>",
+      deadline: new Date("2026-12-01T10:00:00.000Z"),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+
+    await expect(
+      extendDeadline({
+        assignmentId: assignment.id,
+        extendedById: otherEducator.id,
+        newDeadline: new Date("2026-12-05T10:00:00.000Z"),
+        reason: "Should not work",
+      })
+    ).rejects.toThrow(/permission/i);
+  });
+
+  it("Administrator can extend deadline even if not the creating educator", async () => {
+    const { moduleOfferings, educators } = await createOfferingSetup(["Programming"]);
+    const educator = educators[0];
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+
+    const assignment = await createAssignment({
+      moduleOfferingId: moduleOfferings[0].id,
+      createdById: educator.id,
+      title: "Admin Extension",
+      body: "<p>Test.</p>",
+      deadline: new Date("2026-12-01T10:00:00.000Z"),
+      maximumMark: 100,
+    });
+    createdAssignmentIds.push(assignment.id);
+
+    const result = await extendDeadline({
+      assignmentId: assignment.id,
+      extendedById: admin.id,
+      newDeadline: new Date("2026-12-05T10:00:00.000Z"),
+      reason: "Admin approved extension",
+    });
+    createdDeadlineExtensionIds.push(result.extension.id);
+
+    expect(result.extension.newDeadline).toEqual(new Date("2026-12-05T10:00:00.000Z"));
   });
 });
