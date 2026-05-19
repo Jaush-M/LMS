@@ -30,6 +30,9 @@ export default async function AdministratorDashboardPage() {
         <Link href="/administrator/accounts" className="text-blue-600 underline">
           Manage accounts
         </Link>
+        <Link href="/administrator/catalogue" className="text-blue-600 underline">
+          Academic catalogue
+        </Link>
       </nav>
     </main>
   );
