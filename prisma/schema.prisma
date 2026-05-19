@@ -102,6 +102,8 @@ model UserAccount {
   chatParticipantActivities       ChatParticipantActivity[]   @relation("ChatParticipantActivities")
   createdFeedbackPeriods          FeedbackPeriod[]            @relation("CreatedFeedbackPeriods")
   submittedFeedbackResponses      FeedbackResponse[]          @relation("SubmittedFeedbackResponses")
+  createdContentSections          ContentSection[]            @relation("CreatedContentSections")
+  createdModuleContent            ModuleContent[]             @relation("CreatedModuleContent")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -248,6 +250,7 @@ model FileAsset {
 
   announcementAttachments AnnouncementAttachment[]
   chatMessageAttachments  ChatMessageAttachment[]
+  contentAttachments      ContentAttachment[]
 }
 
 // ── Curriculum Templates ───────────────────────────────────────────────────
@@ -374,6 +377,7 @@ model ModuleOffering {
   classSessions               ClassSession[]
   announcements               Announcement[]
   feedbackPeriod              FeedbackPeriod?
+  contentSections             ContentSection[]
 
   @@unique([courseOfferingId, templateModuleId])
 }
@@ -547,18 +551,21 @@ model AnnouncementSharedLink {
 
 enum NotificationSourceType {
   ANNOUNCEMENT
+  MODULE_CONTENT
 }
 
 model Notification {
-  id             String                 @id @default(cuid())
-  recipientId    String
-  recipient      UserAccount            @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
-  sourceType     NotificationSourceType
-  announcementId String?
-  announcement   Announcement?          @relation(fields: [announcementId], references: [id])
-  title          String
-  readAt         DateTime?
-  createdAt      DateTime               @default(now())
+  id              String                 @id @default(cuid())
+  recipientId     String
+  recipient       UserAccount            @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  sourceType      NotificationSourceType
+  announcementId  String?
+  announcement    Announcement?          @relation(fields: [announcementId], references: [id])
+  moduleContentId String?
+  moduleContent   ModuleContent?         @relation(fields: [moduleContentId], references: [id])
+  title           String
+  readAt          DateTime?
+  createdAt       DateTime               @default(now())
 }
 
 // ── Class Sessions ─────────────────────────────────────────────────────────
@@ -613,4 +620,61 @@ model FeedbackResponse {
   updatedAt        DateTime               @updatedAt
 
   @@unique([feedbackPeriodId, studentId])
+}
+
+// ── Module Content ─────────────────────────────────────────────────────────────
+
+model ContentSection {
+  id               String         @id @default(cuid())
+  moduleOfferingId String
+  moduleOffering   ModuleOffering @relation(fields: [moduleOfferingId], references: [id], onDelete: Cascade)
+  title            String
+  sortOrder        Int
+  createdById      String
+  createdBy        UserAccount    @relation("CreatedContentSections", fields: [createdById], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  contentItems ModuleContent[]
+}
+
+enum ModuleContentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model ModuleContent {
+  id               String              @id @default(cuid())
+  contentSectionId String
+  contentSection   ContentSection      @relation(fields: [contentSectionId], references: [id], onDelete: Cascade)
+  title            String
+  body             String
+  status           ModuleContentStatus @default(DRAFT)
+  sortOrder        Int
+  createdById      String
+  createdBy        UserAccount         @relation("CreatedModuleContent", fields: [createdById], references: [id])
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  attachments   ContentAttachment[]
+  sharedLinks   ContentSharedLink[]
+  notifications Notification[]
+}
+
+model ContentAttachment {
+  id            String        @id @default(cuid())
+  contentItemId String
+  contentItem   ModuleContent @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  fileAssetId   String
+  fileAsset     FileAsset     @relation(fields: [fileAssetId], references: [id])
+  createdAt     DateTime      @default(now())
+}
+
+model ContentSharedLink {
+  id            String        @id @default(cuid())
+  contentItemId String
+  contentItem   ModuleContent @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  url           String
+  title         String?
+  createdAt     DateTime      @default(now())
 }
