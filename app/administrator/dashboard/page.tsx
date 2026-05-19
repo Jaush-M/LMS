@@ -36,6 +36,9 @@ export default async function AdministratorDashboardPage() {
         <Link href="/administrator/catalogue" className="text-blue-600 underline">
           Academic catalogue
         </Link>
+        <Link href="/administrator/academic-calendar" className="text-blue-600 underline">
+          Academic Calendar
+        </Link>
       </nav>
     </main>
   );

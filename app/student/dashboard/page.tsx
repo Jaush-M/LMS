@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default async function StudentDashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -22,6 +23,11 @@ export default async function StudentDashboardPage() {
     <main className="p-8">
       <h1 className="text-2xl font-semibold">Student Dashboard</h1>
       <p className="mt-2 text-gray-600">Welcome, {session.user.name}</p>
+      <nav className="mt-6 space-x-4">
+        <Link href="/student/academic-calendar" className="text-blue-600 underline">
+          Academic Calendar
+        </Link>
+      </nav>
     </main>
   );
 }
