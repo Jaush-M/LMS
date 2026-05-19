@@ -116,26 +116,28 @@ model Faculty {
 }
 
 model Course {
-  id           String          @id @default(cuid())
-  code         String          @unique
-  name         String
-  awardLevel   AwardLevel
-  awardingBody String?
-  facultyId    String
-  faculty      Faculty         @relation(fields: [facultyId], references: [id])
-  status       CatalogueStatus @default(ACTIVE)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id                 String              @id @default(cuid())
+  code               String              @unique
+  name               String
+  awardLevel         AwardLevel
+  awardingBody       String?
+  facultyId          String
+  faculty            Faculty             @relation(fields: [facultyId], references: [id])
+  status             CatalogueStatus     @default(ACTIVE)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  curriculumTemplate CurriculumTemplate?
 }
 
 model Module {
-  id          String          @id @default(cuid())
-  code        String          @unique
-  name        String
-  description String?
-  status      CatalogueStatus @default(ACTIVE)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id              String           @id @default(cuid())
+  code            String           @unique
+  name            String
+  description     String?
+  status          CatalogueStatus  @default(ACTIVE)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  templateModules TemplateModule[]
 }
 
 model Intake {
@@ -225,4 +227,75 @@ model FileAsset {
   status           FileAssetStatus @default(ACTIVE)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+}
+
+// ── Curriculum Templates ───────────────────────────────────────────────────
+
+model CurriculumTemplate {
+  id        String          @id @default(cuid())
+  courseId  String          @unique
+  course    Course          @relation(fields: [courseId], references: [id])
+  status    CatalogueStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  academicLevels  AcademicLevel[]
+  templateModules TemplateModule[]
+}
+
+model AcademicLevel {
+  id                   String             @id @default(cuid())
+  curriculumTemplateId String
+  curriculumTemplate   CurriculumTemplate @relation(fields: [curriculumTemplateId], references: [id], onDelete: Cascade)
+  label                String
+  sortOrder            Int
+  expectedCredits      Int?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  templateModules TemplateModule[]
+}
+
+model TemplateModule {
+  id                   String             @id @default(cuid())
+  curriculumTemplateId String
+  curriculumTemplate   CurriculumTemplate @relation(fields: [curriculumTemplateId], references: [id], onDelete: Cascade)
+  academicLevelId      String
+  academicLevel        AcademicLevel      @relation(fields: [academicLevelId], references: [id], onDelete: Cascade)
+  moduleId             String
+  module               Module             @relation(fields: [moduleId], references: [id])
+  credits              Int
+  sortOrder            Int
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  prerequisites               TemplateModulePrerequisite[] @relation("Dependent")
+  dependents                  TemplateModulePrerequisite[] @relation("Prerequisite")
+  defaultAssessmentComponents DefaultAssessmentComponent[]
+}
+
+model TemplateModulePrerequisite {
+  templateModuleId String
+  templateModule   TemplateModule @relation("Dependent", fields: [templateModuleId], references: [id], onDelete: Cascade)
+  prerequisiteId   String
+  prerequisite     TemplateModule @relation("Prerequisite", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+
+  @@id([templateModuleId, prerequisiteId])
+}
+
+enum AssessmentComponentType {
+  ONLINE_ASSIGNMENT
+  OFFLINE_ASSESSMENT
+}
+
+model DefaultAssessmentComponent {
+  id               String                  @id @default(cuid())
+  templateModuleId String
+  templateModule   TemplateModule          @relation(fields: [templateModuleId], references: [id], onDelete: Cascade)
+  title            String
+  type             AssessmentComponentType
+  weightPercent    Float
+  maximumMark      Float
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
 }
