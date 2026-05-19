@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
-export default async function SuperAdministratorDashboardPage() {
+export default async function AdministratorDashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
 
@@ -13,20 +13,17 @@ export default async function SuperAdministratorDashboardPage() {
     select: { role: true },
   });
 
-  if (!userAccount || userAccount.role !== "SUPER_ADMINISTRATOR") {
+  if (!userAccount || userAccount.role !== "ADMINISTRATOR") {
     redirect("/dashboard");
   }
 
   return (
     <main className="p-8">
-      <h1 className="text-2xl font-semibold">Super Administrator Dashboard</h1>
+      <h1 className="text-2xl font-semibold">Administrator Dashboard</h1>
       <p className="mt-2 text-gray-600">Welcome, {session.user.name}</p>
       <nav className="mt-6 space-x-4">
-        <Link
-          href="/super-administrator/create-administrator"
-          className="text-blue-600 underline"
-        >
-          Create administrator
+        <Link href="/administrator/create-account" className="text-blue-600 underline">
+          Create account
         </Link>
       </nav>
     </main>
