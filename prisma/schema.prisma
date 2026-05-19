@@ -100,6 +100,8 @@ model UserAccount {
   receivedNotifications           Notification[]              @relation("ReceivedNotifications")
   sentChatMessages                ChatMessage[]               @relation("SentChatMessages")
   chatParticipantActivities       ChatParticipantActivity[]   @relation("ChatParticipantActivities")
+  createdFeedbackPeriods          FeedbackPeriod[]            @relation("CreatedFeedbackPeriods")
+  submittedFeedbackResponses      FeedbackResponse[]          @relation("SubmittedFeedbackResponses")
 }
 
 // ── Academic catalogue ────────────────────────────────────────────────────
@@ -371,6 +373,7 @@ model ModuleOffering {
   moduleEnrollmentExceptions  ModuleEnrollmentException[]
   classSessions               ClassSession[]
   announcements               Announcement[]
+  feedbackPeriod              FeedbackPeriod?
 
   @@unique([courseOfferingId, templateModuleId])
 }
@@ -574,4 +577,40 @@ model ClassSession {
   createdBy          UserAccount    @relation("CreatedClassSessions", fields: [createdById], references: [id])
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
+}
+
+// ── Module Feedback ────────────────────────────────────────────────────────
+
+enum FeedbackResponseStatus {
+  ACTIVE
+  MODERATED
+}
+
+model FeedbackPeriod {
+  id               String         @id @default(cuid())
+  moduleOfferingId String         @unique
+  moduleOffering   ModuleOffering @relation(fields: [moduleOfferingId], references: [id], onDelete: Cascade)
+  openAt           DateTime
+  closeAt          DateTime
+  createdById      String
+  createdBy        UserAccount    @relation("CreatedFeedbackPeriods", fields: [createdById], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  responses FeedbackResponse[]
+}
+
+model FeedbackResponse {
+  id               String                 @id @default(cuid())
+  feedbackPeriodId String
+  feedbackPeriod   FeedbackPeriod         @relation(fields: [feedbackPeriodId], references: [id], onDelete: Cascade)
+  studentId        String
+  student          UserAccount            @relation("SubmittedFeedbackResponses", fields: [studentId], references: [id])
+  rating           Int
+  comment          String?
+  status           FeedbackResponseStatus @default(ACTIVE)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@unique([feedbackPeriodId, studentId])
 }
