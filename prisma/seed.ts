@@ -102,7 +102,24 @@ const accounts = [
   },
 ];
 
+const defaultIntakes = ["January", "May", "September"];
+const defaultStudyModes = ["Face-to-Face", "Blended", "E-Learning"];
+const defaultSessionTypes = ["Lecture", "Practical Workshop", "Tutorial", "Lab", "Exam", "Other"];
+
 async function main() {
+  await prisma.intake.createMany({
+    data: defaultIntakes.map((name) => ({ name })),
+    skipDuplicates: false,
+  });
+  await prisma.studyMode.createMany({
+    data: defaultStudyModes.map((name) => ({ name })),
+    skipDuplicates: false,
+  });
+  await prisma.sessionType.createMany({
+    data: defaultSessionTypes.map((name) => ({ name })),
+    skipDuplicates: false,
+  });
+
   for (const account of accounts) {
     const id = crypto.randomUUID();
     await createAuthUser({
@@ -123,6 +140,7 @@ async function main() {
     });
   }
 
+  console.log("Catalogue seeded: intakes, study modes, session types");
   console.log("Seed complete");
   console.log(`Super Administrator: SA000001@lms.edu.mv / ${TEMP_PASSWORD}`);
   console.log(`Administrator:       A000001@lms.edu.mv / ${TEMP_PASSWORD}`);

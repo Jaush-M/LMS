@@ -85,9 +85,81 @@ model UserAccount {
   institutionalEmail  String            @unique
   status              UserAccountStatus @default(INACTIVE)
   mustChangePassword  Boolean           @default(true)
+  homeFacultyId       String?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   fileAssets          FileAsset[]
+}
+
+// ── Academic catalogue ────────────────────────────────────────────────────
+
+enum CatalogueStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AwardLevel {
+  FOUNDATION
+  DIPLOMA
+  DEGREE
+  MASTERS
+  PHD
+}
+
+model Faculty {
+  id        String          @id @default(cuid())
+  name      String
+  status    CatalogueStatus @default(ACTIVE)
+  courses   Course[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model Course {
+  id           String          @id @default(cuid())
+  code         String          @unique
+  name         String
+  awardLevel   AwardLevel
+  awardingBody String?
+  facultyId    String
+  faculty      Faculty         @relation(fields: [facultyId], references: [id])
+  status       CatalogueStatus @default(ACTIVE)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Module {
+  id          String          @id @default(cuid())
+  code        String          @unique
+  name        String
+  description String?
+  status      CatalogueStatus @default(ACTIVE)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Intake {
+  id        String          @id @default(cuid())
+  name      String
+  status    CatalogueStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model StudyMode {
+  id        String          @id @default(cuid())
+  name      String
+  status    CatalogueStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model SessionType {
+  id        String          @id @default(cuid())
+  name      String
+  status    CatalogueStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 }
 
 // ── Audit Log ─────────────────────────────────────────────────────────────
