@@ -161,6 +161,46 @@ export async function deleteChatMessage(input: DeleteChatMessageInput) {
   });
 }
 
+// ── moderateChatMessage ───────────────────────────────────────────────────────
+
+export type ModerateChatMessageInput = {
+  messageId: string;
+  moderatorId: string;
+  reason: string;
+};
+
+export async function moderateChatMessage(input: ModerateChatMessageInput) {
+  const moderator = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.moderatorId } });
+
+  if (moderator.role !== "ADMINISTRATOR" && moderator.role !== "SUPER_ADMINISTRATOR") {
+    throw new Error("Permission denied: only Administrators may moderate chat messages");
+  }
+
+  const [message] = await prisma.$transaction([
+    prisma.chatMessage.update({
+      where: { id: input.messageId },
+      data: {
+        body: "",
+        status: "REMOVED",
+        moderationReason: input.reason,
+        removedById: input.moderatorId,
+      },
+    }),
+    prisma.auditLogEntry.create({
+      data: {
+        eventType: "OPERATIONAL",
+        action: "CHAT_MESSAGE_MODERATED",
+        actorId: input.moderatorId,
+        entityType: "ChatMessage",
+        entityId: input.messageId,
+        reason: input.reason,
+      },
+    }),
+  ]);
+
+  return message;
+}
+
 // ── listChatMessages ──────────────────────────────────────────────────────────
 
 export type ListChatMessagesInput = {
@@ -197,11 +237,19 @@ export async function searchChatMessages(input: SearchChatMessagesInput) {
   const viewer = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.viewerId } });
   const isAdmin = viewer.role === "ADMINISTRATOR" || viewer.role === "SUPER_ADMINISTRATOR";
 
-  const where = {
-    chatId: input.chatId,
-    body: { contains: input.keyword, mode: "insensitive" as const },
-    ...(isAdmin ? {} : { status: { not: "REMOVED" as const } }),
-  };
+  const where = isAdmin
+    ? {
+        chatId: input.chatId,
+        OR: [
+          { body: { contains: input.keyword, mode: "insensitive" as const } },
+          { moderationReason: { contains: input.keyword, mode: "insensitive" as const } },
+        ],
+      }
+    : {
+        chatId: input.chatId,
+        status: { not: "REMOVED" as const },
+        body: { contains: input.keyword, mode: "insensitive" as const },
+      };
 
   return prisma.chatMessage.findMany({
     where,

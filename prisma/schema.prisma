@@ -99,6 +99,7 @@ model UserAccount {
   createdAnnouncements            Announcement[]              @relation("CreatedAnnouncements")
   receivedNotifications           Notification[]              @relation("ReceivedNotifications")
   sentChatMessages                ChatMessage[]               @relation("SentChatMessages")
+  moderatedChatMessages           ChatMessage[]               @relation("RemovedChatMessages")
   chatParticipantActivities       ChatParticipantActivity[]   @relation("ChatParticipantActivities")
   createdFeedbackPeriods          FeedbackPeriod[]            @relation("CreatedFeedbackPeriods")
   submittedFeedbackResponses      FeedbackResponse[]          @relation("SubmittedFeedbackResponses")
@@ -419,16 +420,19 @@ enum ChatMessageStatus {
 }
 
 model ChatMessage {
-  id        String            @id @default(cuid())
-  chatId    String
-  chat      ModuleGroupChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  senderId  String
-  sender    UserAccount       @relation("SentChatMessages", fields: [senderId], references: [id])
-  body      String
-  status    ChatMessageStatus @default(ACTIVE)
-  editedAt  DateTime?
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  id               String            @id @default(cuid())
+  chatId           String
+  chat             ModuleGroupChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  senderId         String
+  sender           UserAccount       @relation("SentChatMessages", fields: [senderId], references: [id])
+  body             String
+  status           ChatMessageStatus @default(ACTIVE)
+  editedAt         DateTime?
+  moderationReason String?
+  removedById      String?
+  removedBy        UserAccount?      @relation("RemovedChatMessages", fields: [removedById], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   attachments ChatMessageAttachment[]
   sharedLinks ChatMessageSharedLink[]

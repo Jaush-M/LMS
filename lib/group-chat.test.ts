@@ -3,6 +3,7 @@ import {
   sendChatMessage,
   editChatMessage,
   deleteChatMessage,
+  moderateChatMessage,
   listChatMessages,
   searchChatMessages,
   markChatSeen,
@@ -247,6 +248,135 @@ describe("deleteChatMessage — sender self-delete", () => {
     await expect(
       deleteChatMessage({ messageId: message.id, senderId: educator.id })
     ).rejects.toThrow(/permission/i);
+  });
+});
+
+// ── behaviors 15–20: moderation ──────────────────────────────────────────────
+
+describe("moderateChatMessage — administrator message removal", () => {
+  afterEach(cleanup);
+
+  it("Student cannot moderate a message — permission denied", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const { offering, chat } = await createOfferingSetup();
+    const student = await createTestUserAccount("STUDENT");
+    const r = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (r.status !== "enrolled") throw new Error("enrollment failed");
+    createdEnrollmentIds.push(r.enrollment.id);
+
+    const message = await sendChatMessage({ chatId: chat.id, senderId: student.id, body: "Hello" });
+
+    await expect(
+      moderateChatMessage({ messageId: message.id, moderatorId: student.id, reason: "Bad" })
+    ).rejects.toThrow(/permission/i);
+  });
+
+  it("Educator cannot moderate a message — permission denied", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const { offering, chat, educator } = await createOfferingSetup();
+    const student = await createTestUserAccount("STUDENT");
+    const r = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (r.status !== "enrolled") throw new Error("enrollment failed");
+    createdEnrollmentIds.push(r.enrollment.id);
+
+    const message = await sendChatMessage({ chatId: chat.id, senderId: student.id, body: "Hello" });
+
+    await expect(
+      moderateChatMessage({ messageId: message.id, moderatorId: educator.id, reason: "Bad" })
+    ).rejects.toThrow(/permission/i);
+  });
+
+  it("Administrator moderates a message: status REMOVED, body cleared, reason and removedById recorded", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const { offering, chat } = await createOfferingSetup();
+    const student = await createTestUserAccount("STUDENT");
+    const r = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (r.status !== "enrolled") throw new Error("enrollment failed");
+    createdEnrollmentIds.push(r.enrollment.id);
+
+    const message = await sendChatMessage({ chatId: chat.id, senderId: student.id, body: "Bad content" });
+    const moderated = await moderateChatMessage({ messageId: message.id, moderatorId: admin.id, reason: "Inappropriate language" });
+
+    expect(moderated.status).toBe("REMOVED");
+    expect(moderated.body).toBe("");
+    expect(moderated.moderationReason).toBe("Inappropriate language");
+    expect(moderated.removedById).toBe(admin.id);
+  });
+
+  it("Moderation creates an Operational Audit Log entry with actor, message id, and reason", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const { offering, chat } = await createOfferingSetup();
+    const student = await createTestUserAccount("STUDENT");
+    const r = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (r.status !== "enrolled") throw new Error("enrollment failed");
+    createdEnrollmentIds.push(r.enrollment.id);
+
+    const message = await sendChatMessage({ chatId: chat.id, senderId: student.id, body: "Offensive content" });
+    await moderateChatMessage({ messageId: message.id, moderatorId: admin.id, reason: "Offensive language" });
+
+    const entry = await prisma.auditLogEntry.findFirst({
+      where: { actorId: admin.id, entityId: message.id, action: "CHAT_MESSAGE_MODERATED" },
+    });
+
+    expect(entry).not.toBeNull();
+    expect(entry!.eventType).toBe("OPERATIONAL");
+    expect(entry!.reason).toBe("Offensive language");
+    expect(entry!.entityType).toBe("ChatMessage");
+  });
+});
+
+// ── TC-013: removed marker visibility ────────────────────────────────────────
+
+describe("TC-013 — moderated message visibility", () => {
+  afterEach(cleanup);
+
+  it("Student cannot find moderated message content via searchChatMessages", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const { offering, chat } = await createOfferingSetup();
+    const student = await createTestUserAccount("STUDENT");
+    const r = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (r.status !== "enrolled") throw new Error("enrollment failed");
+    createdEnrollmentIds.push(r.enrollment.id);
+
+    const message = await sendChatMessage({ chatId: chat.id, senderId: student.id, body: "Offensive keyword" });
+    await moderateChatMessage({ messageId: message.id, moderatorId: admin.id, reason: "Policy violation" });
+
+    const results = await searchChatMessages({ chatId: chat.id, viewerId: student.id, keyword: "Offensive" });
+    expect(results).toHaveLength(0);
+  });
+
+  it("Moderated message appears in listChatMessages for a Student with status REMOVED and empty body", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const { offering, chat } = await createOfferingSetup();
+    const student = await createTestUserAccount("STUDENT");
+    const r = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (r.status !== "enrolled") throw new Error("enrollment failed");
+    createdEnrollmentIds.push(r.enrollment.id);
+
+    const message = await sendChatMessage({ chatId: chat.id, senderId: student.id, body: "Secret content" });
+    await moderateChatMessage({ messageId: message.id, moderatorId: admin.id, reason: "Violation" });
+
+    const messages = await listChatMessages({ chatId: chat.id, viewerId: student.id });
+    const moderated = messages.find((m) => m.id === message.id);
+
+    expect(moderated).toBeDefined();
+    expect(moderated!.status).toBe("REMOVED");
+    expect(moderated!.body).toBe("");
+  });
+
+  it("Administrator can search moderated records by moderationReason keyword", async () => {
+    const admin = await createTestUserAccount("ADMINISTRATOR");
+    const { offering, chat } = await createOfferingSetup();
+    const student = await createTestUserAccount("STUDENT");
+    const r = await enrollStudent({ studentId: student.id, courseOfferingId: offering.id, enrolledById: admin.id });
+    if (r.status !== "enrolled") throw new Error("enrollment failed");
+    createdEnrollmentIds.push(r.enrollment.id);
+
+    const message = await sendChatMessage({ chatId: chat.id, senderId: student.id, body: "Bad content" });
+    await moderateChatMessage({ messageId: message.id, moderatorId: admin.id, reason: "Harassment violation" });
+
+    const results = await searchChatMessages({ chatId: chat.id, viewerId: admin.id, keyword: "Harassment" });
+    expect(results.some((m) => m.id === message.id)).toBe(true);
   });
 });
 
