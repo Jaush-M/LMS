@@ -8,7 +8,7 @@ In scope:
 - Authentication and role routing
 - Academic setup
 - Course offering and module offering creation
-- Enrolment and capacity handling
+- Enrollment and capacity handling
 - Attendance marking and correction behavior
 - Assignment submission and deadline behavior
 - Assessment, marking, and final grade release
@@ -103,7 +103,7 @@ Expected result:
 - Assessment Components are copied from Default Assessment Components.
 - Audit Log records the setup action.
 
-### TC-004: Enrolment Capacity Warning And Override
+### TC-004: Enrollment Capacity Warning And Override
 
 Objective:
 Verify capacity rules and override auditability.
@@ -114,19 +114,19 @@ Preconditions:
 - Another active Student exists.
 
 Steps:
-1. Administrator attempts to enrol the 25th Student.
+1. Administrator attempts to enroll the 25th Student.
 2. Observe capacity warning.
 3. Enter Capacity Override reason.
-4. Confirm enrolment.
+4. Confirm enrollment.
 
 Expected result:
 - System warns that capacity is exceeded.
 - Administrator can continue only with a recorded reason.
-- Enrolment is created.
+- Enrollment is created.
 - CapacityOverride record is created.
 - Audit Log records the override.
 
-### TC-005: CSV Enrolment Import Preview
+### TC-005: CSV Enrollment Import Preview
 
 Objective:
 Verify CSV import validates before committing.
@@ -136,7 +136,7 @@ Preconditions:
 - CSV contains valid students, a duplicate student, and a row with invalid email format.
 
 Steps:
-1. Administrator uploads enrolment CSV.
+1. Administrator uploads enrollment CSV.
 2. Review import preview.
 3. Confirm import only after validation.
 
@@ -144,7 +144,7 @@ Expected result:
 - Preview shows valid rows and validation errors.
 - Duplicate is matched by Student Identifier or Institutional Email.
 - Invalid row is not imported.
-- Valid rows create or match Student accounts and create Enrolments.
+- Valid rows create or match Student accounts and create Enrollments.
 
 ### TC-006: Educator Marks Attendance
 
@@ -372,9 +372,9 @@ Expected result:
 ## Acceptance Criteria Summary
 
 - Core role workflows function end to end.
-- Students cannot self-enrol or create academic records outside their allowed actions.
+- Students cannot self-enroll or create academic records outside their allowed actions.
 - Educators can manage only assigned Module Offerings.
-- Administrators control academic setup and enrolment.
+- Administrators control academic setup and enrollment.
 - Super Administrators control administrator accounts and system settings.
 - Attendance, grades, files, moderation, and system settings are auditable.
 - Dashboards expose due work, attendance, marks, notifications, and risk/attention signals.

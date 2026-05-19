@@ -41,7 +41,7 @@ Fields:
 
 Relationships:
 - belongs to one `UserAccount`
-- has many `Enrolments`
+- has many `Enrollments`
 - has many `Submissions`
 - has many `ComponentMarks`
 - has many `FinalGrades`
@@ -235,7 +235,7 @@ Relationships:
 - belongs to one `Intake`
 - belongs to one default `StudyMode`
 - has many `ModuleOfferings`
-- has many `Enrolments`
+- has many `Enrollments`
 - has many `CourseOfferingEvents`
 - has many `CourseOfferingAnnouncements`
 
@@ -265,9 +265,9 @@ Relationships:
 - has many `ModuleOfferingAnnouncements`
 - has many `ModuleFeedbackPeriods`
 
-## Enrolment And Access
+## Enrollment And Access
 
-### Enrolment
+### Enrollment
 
 Fields:
 - `id`
@@ -280,28 +280,28 @@ Fields:
 Relationships:
 - belongs to one `StudentProfile`
 - belongs to one `CourseOffering`
-- has many `ModuleEnrolmentExceptions`
+- has many `ModuleEnrollmentExceptions`
 
 Constraints:
-- one Student should have at most one active `isMain` enrolment
-- one Student should not have duplicate active enrolments in the same Course Offering
+- one Student should have at most one active `isMain` enrollment
+- one Student should not have duplicate active enrollments in the same Course Offering
 
-### ModuleEnrolmentException
+### ModuleEnrollmentException
 
 Fields:
 - `id`
-- `enrolmentId`
+- `enrollmentId`
 - `moduleOfferingId`
 - `type`: `include | exclude`
 - `reason`
 
 Relationships:
-- belongs to one `Enrolment`
+- belongs to one `Enrollment`
 - belongs to one `ModuleOffering`
 
 Derived access:
 - `EffectiveModuleAccess` is not a table by default.
-- It is calculated from Course Offering enrolment, active Module Offerings, and include/exclude exceptions.
+- It is calculated from Course Offering enrollment, active Module Offerings, and include/exclude exceptions.
 
 ### CapacityOverride
 
@@ -800,9 +800,9 @@ Initial keys:
 - One Course has many Course Offerings.
 - One Course Offering has many Module Offerings.
 - One Module Offering has one primary Educator.
-- One Course Offering has many Enrolments.
-- One Enrolment belongs to one Student and one Course Offering.
-- One Enrolment has many Module Enrolment Exceptions.
+- One Course Offering has many Enrollments.
+- One Enrollment belongs to one Student and one Course Offering.
+- One Enrollment has many Module Enrollment Exceptions.
 - One Module Offering has many Class Sessions.
 - One Class Session has many Attendance Records.
 - One Module Offering has many Assessment Components.
@@ -820,11 +820,11 @@ Initial keys:
 
 These should not start as physical tables unless implementation proves they need caching:
 
-- **Effective Module Access**: derived from active Enrolment, Course Offering Module Offerings, and Module Enrolment Exceptions.
+- **Effective Module Access**: derived from active Enrollment, Course Offering Module Offerings, and Module Enrollment Exceptions.
 - **Attendance Percentage**: derived from Attendance Records, excluding excused statuses and counting late as attended.
 - **Educator Attendance**: derived when the primary Educator submits Attendance for a Class Session, optionally materialized in `EducatorAttendanceRecord`.
 - **At-Risk Student**: derived from attendance below 80%, overdue missing submissions, released final grade below 50%, or work due within Reminder Period.
-- **Guided Learning Dashboard**: derived from enrolment, assignments, attendance, marks, calendar, chat, notifications, and announcements.
+- **Guided Learning Dashboard**: derived from enrollment, assignments, attendance, marks, calendar, chat, notifications, and announcements.
 - **Calendar Feed**: combines Calendar Events, Course Offering dates, Module Offering dates, Class Sessions, and Assignment deadlines.
 
 ## Open Questions

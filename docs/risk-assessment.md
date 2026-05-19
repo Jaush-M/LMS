@@ -13,7 +13,7 @@ Risk scale:
 | --- | --- | --- | --- | --- | --- |
 | R-001 | Scope is too large for the available project time. | High | High | Critical | Build in phases, keep out-of-scope list firm, prioritise core workflows before polish, and use seed data for demo coverage. |
 | R-002 | Role permissions are implemented inconsistently. | Medium | High | High | Centralise authorization checks, test each role workflow, and use the specification as the permission source of truth. |
-| R-003 | Students gain access to modules, marks, attendance, or chats outside Effective Module Access. | Medium | High | High | Derive access from Enrolment and Module Enrolment Exceptions, test access boundaries, and avoid ad hoc filtering. |
+| R-003 | Students gain access to modules, marks, attendance, or chats outside Effective Module Access. | Medium | High | High | Derive access from Enrollment and Module Enrollment Exceptions, test access boundaries, and avoid ad hoc filtering. |
 | R-004 | Educators can modify academic records outside assigned Module Offerings. | Medium | High | High | Scope educator actions to primary assigned Module Offerings and test cross-module access denial. |
 | R-005 | Academic records are accidentally deleted. | Medium | High | High | Use disabled, inactive, archived, removed, and moderated states instead of destructive deletion for academic records. |
 | R-006 | Attendance or grade changes lack accountability. | Medium | High | High | Require reasons for post-lock attendance changes, released mark corrections, final grade corrections, and capacity overrides; record Audit Logs. |
@@ -41,7 +41,7 @@ Risk scale:
 
 ### Scope Creep
 
-The full LMS includes many interdependent workflows. The project should still be implemented in phases, with identity, academic setup, enrolment, assignments, attendance, and dashboards completed before advanced reporting polish.
+The full LMS includes many interdependent workflows. The project should still be implemented in phases, with identity, academic setup, enrollment, assignments, attendance, and dashboards completed before advanced reporting polish.
 
 ### Permission Boundaries
 
@@ -49,7 +49,7 @@ The most important security risk is users seeing or changing records outside the
 
 ### Academic Record Integrity
 
-Attendance, submissions, marks, final grades, feedback, chat moderation, and enrolment records must remain attributable. The system should prefer archive/inactive/disabled/removed states instead of destructive deletes.
+Attendance, submissions, marks, final grades, feedback, chat moderation, and enrollment records must remain attributable. The system should prefer archive/inactive/disabled/removed states instead of destructive deletes.
 
 ### File Upload Safety
 

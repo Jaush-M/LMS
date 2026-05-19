@@ -4,7 +4,7 @@ This document explains how the LMS design addresses data protection, academic in
 
 ## Data Protection
 
-The LMS stores personal and academic data, including names, institutional emails, generated identifiers, enrolments, attendance, submissions, marks, final grades, chat messages, and feedback. Access to this data must be limited by role and academic relationship.
+The LMS stores personal and academic data, including names, institutional emails, generated identifiers, enrollments, attendance, submissions, marks, final grades, chat messages, and feedback. Access to this data must be limited by role and academic relationship.
 
 Design controls:
 - Students can only see their own attendance, submissions, marks, final grades, notifications, and relevant module/course data.
@@ -16,7 +16,7 @@ Design controls:
 
 ## Academic Record Integrity
 
-Attendance, marks, final grades, submissions, enrolments, and feedback are academic records. The system must preserve attribution and prevent silent changes.
+Attendance, marks, final grades, submissions, enrollments, and feedback are academic records. The system must preserve attribution and prevent silent changes.
 
 Design controls:
 - Generated identifiers are never reused.
@@ -33,7 +33,7 @@ Students should not be exposed to unnecessary personal data about other students
 
 Design controls:
 - Student-to-student visibility is limited to display name and Student Identifier in relevant Module Group Chats.
-- Students cannot see other students' attendance, submissions, marks, final grades, enrolments, phone numbers, or institutional emails.
+- Students cannot see other students' attendance, submissions, marks, final grades, enrollments, phone numbers, or institutional emails.
 - Educators see only academic information connected to their assigned Module Offerings.
 
 ## Feedback Ethics
@@ -84,7 +84,7 @@ The LMS uses institution-created accounts rather than public registration.
 
 Design controls:
 - No public signup.
-- No student self-enrolment.
+- No student self-enrollment.
 - No educator self-assignment.
 - Institutional emails and generated identifiers are controlled by authorized staff.
 - Temporary passwords must be changed after first sign-in.

@@ -12,20 +12,20 @@ _Avoid_: Moodle clone
 A learner enrolled by an administrator into a specific course intake.
 _Avoid_: Learner, pupil
 
-**Enrolment**:
+**Enrollment**:
 An administrator-created relationship between a student and a course offering.
-_Avoid_: Registration, self-enrolment
+_Avoid_: Registration, self-enrollment
 
-**Main Enrolment**:
-The enrolment treated as the student's default active course offering.
+**Main Enrollment**:
+The enrollment treated as the student's default active course offering.
 _Avoid_: Primary course
 
-**Module Enrolment Exception**:
+**Module Enrollment Exception**:
 An administrator-defined change to the module offerings a student takes within a course offering.
 _Avoid_: Module override
 
 **Effective Module Access**:
-The module offerings available to a student after enrolment and module enrolment exceptions are applied.
+The module offerings available to a student after enrollment and module enrollment exceptions are applied.
 _Avoid_: Actual access
 
 **Educator**:
@@ -41,7 +41,7 @@ A record of sensitive system or academic changes visible to administrators and s
 _Avoid_: Activity log
 
 **Operational Audit Event**:
-An audit log entry about academic setup, enrolment, attendance, marking, moderation, or file activity.
+An audit log entry about academic setup, enrollment, attendance, marking, moderation, or file activity.
 _Avoid_: Admin event
 
 **System Audit Event**:
@@ -49,7 +49,7 @@ An audit log entry about administrator accounts, security-sensitive activity, or
 _Avoid_: Super admin event
 
 **Administrator**:
-A staff user who controls course setup, module assignments, academic dates, and student enrolment.
+A staff user who controls course setup, module assignments, academic dates, and student enrollment.
 _Avoid_: Admin
 
 **Super Administrator**:
@@ -129,8 +129,8 @@ The expected maximum number of students in a course offering.
 _Avoid_: Class size
 
 **Capacity Override**:
-An administrator-approved enrolment beyond course offering capacity.
-_Avoid_: Over-enrolment
+An administrator-approved enrollment beyond course offering capacity.
+_Avoid_: Over-enrollment
 
 **Archived Course Offering**:
 A finished course offering hidden from normal day-to-day views while preserving its academic records.
@@ -478,16 +478,16 @@ _Avoid_: Censorship
 
 ## Relationships
 
-- A **Student** has one or more **Enrolments**.
-- An **Enrolment** connects one **Student** to one **Course Offering**.
-- A **Main Enrolment** identifies the student's default active **Course Offering**.
-- A **Module Enrolment Exception** changes a **Student's** access to a **Module Offering** within an **Enrolment**.
+- A **Student** has one or more **Enrollments**.
+- An **Enrollment** connects one **Student** to one **Course Offering**.
+- A **Main Enrollment** identifies the student's default active **Course Offering**.
+- A **Module Enrollment Exception** changes a **Student's** access to a **Module Offering** within an **Enrollment**.
 - **Effective Module Access** includes default module offerings plus included exceptions and excludes removed exceptions.
 - **Attendance**, **Assignment**, **Module Content**, **Module Group Chat**, and **Marking** follow **Effective Module Access**.
 - A **Super Administrator** manages **Administrators**.
 - A **Super Administrator** controls system-wide settings.
 - A **Super Administrator** controls **System Settings**.
-- An **Administrator** controls academic setup and enrolment.
+- An **Administrator** controls academic setup and enrollment.
 - A **Super Administrator** creates **Administrator** user accounts.
 - An **Administrator** creates **Student** and **Educator** user accounts.
 - A **User Account** cannot change its own role.
@@ -531,7 +531,7 @@ _Avoid_: Censorship
 - A **Module Offering Date Range** falls within the **Course Offering Date Range**.
 - Replacing a primary **Educator** does not move **Academic Records** away from their **Module Offering**.
 - **Academic Records** preserve the user responsible for creating or changing them.
-- An **Audit Log** records sensitive account, academic setup, enrolment, attendance, marking, final grade, moderation, and file events.
+- An **Audit Log** records sensitive account, academic setup, enrollment, attendance, marking, final grade, moderation, and file events.
 - **Operational Audit Events** are visible to **Administrators** and **Super Administrators**.
 - **System Audit Events** are visible to **Super Administrators**.
 - A **Module Offering** belongs to exactly one **Academic Level**.
@@ -636,7 +636,7 @@ _Avoid_: Censorship
 ## Example Dialogue
 
 > **Dev:** "Can a **Student** join a **Course** by themselves?"
-> **Domain expert:** "No. Only an **Administrator** can enrol a **Student** into a **Course Offering** for a selected **Intake**."
+> **Domain expert:** "No. Only an **Administrator** can enroll a **Student** into a **Course Offering** for a selected **Intake**."
 
 ## Flagged Ambiguities
 

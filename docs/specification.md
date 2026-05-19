@@ -133,9 +133,9 @@ All upload categories allow any file type.
 
 ### Enrollment
 
-- FR-057: Students must not self-enrol.
+- FR-057: Students must not self-enroll.
 - FR-058: Educators must not self-assign to modules.
-- FR-059: Administrators must enrol Students into Course Offerings.
+- FR-059: Administrators must enroll Students into Course Offerings.
 - FR-060: Students may have multiple active enrollments.
 - FR-061: One enrollment may be marked as the Student's Main Enrollment.
 - FR-062: Enrolling a Student into a Course Offering must grant default access to its Module Offerings.
@@ -338,7 +338,7 @@ All upload categories allow any file type.
 - FR-226: PDF exports are optional/future enhancement.
 - FR-227: Course, Module, and Curriculum setup CSV import is out of scope for the first version.
 - FR-228: Administrators must be able to bulk disable selected Student/Educator accounts.
-- FR-229: Administrators must be able to bulk enrol selected Students into a Course Offering.
+- FR-229: Administrators must be able to bulk enroll selected Students into a Course Offering.
 - FR-230: Administrators must be able to bulk apply Module Enrollment Exceptions to selected Students.
 - FR-231: Administrators must be able to bulk archive eligible finished Course Offerings.
 - FR-232: Administrators must be able to export selected records.

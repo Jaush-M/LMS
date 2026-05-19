@@ -48,9 +48,9 @@ Administrator use cases:
 - Create Course Offerings and Module Offerings
 - Assign Educators
 - Create Class Sessions
-- Enrol Students
-- Import enrolments by CSV
-- Manage Module Enrolment Exceptions
+- Enroll Students
+- Import enrollments by CSV
+- Manage Module Enrollment Exceptions
 - Manage Institution and Course Offering calendar events
 - Create Institution and Course Offering announcements
 - Moderate Module Group Chat
@@ -94,8 +94,8 @@ Academic structure:
 Delivery:
 - CourseOffering
 - ModuleOffering
-- Enrolment
-- ModuleEnrolmentException
+- Enrollment
+- ModuleEnrollmentException
 - CapacityOverride
 
 Attendance:
@@ -139,9 +139,9 @@ Key relationships to show:
 - Course 1..* CourseOffering
 - CourseOffering 1..* ModuleOffering
 - ModuleOffering 1..1 primary EducatorProfile
-- StudentProfile 1..* Enrolment
-- Enrolment *..1 CourseOffering
-- Enrolment 1..* ModuleEnrolmentException
+- StudentProfile 1..* Enrollment
+- Enrollment *..1 CourseOffering
+- Enrollment 1..* ModuleEnrollmentException
 - ModuleOffering 1..* ClassSession
 - ClassSession 1..* AttendanceRecord
 - ModuleOffering 1..* AssessmentComponent
@@ -200,8 +200,8 @@ Participants:
 Flow:
 1. Administrator selects Student and CourseOffering.
 2. App checks capacity and prerequisite warnings.
-3. Administrator confirms enrolment or capacity override with reason.
-4. App creates Enrolment and optional CapacityOverride.
+3. Administrator confirms enrollment or capacity override with reason.
+4. App creates Enrollment and optional CapacityOverride.
 5. App derives EffectiveModuleAccess.
 6. App grants access to module content, assignments, calendar, and ModuleGroupChats.
 7. App records AuditLogEntry.
@@ -338,7 +338,7 @@ Activities:
 - Assign Educators.
 - Confirm Assessment Structures.
 - Create ClassSessions.
-- Enrol Students or import CSV.
+- Enroll Students or import CSV.
 
 Decision points:
 - Are Course/Intake active?
@@ -378,7 +378,7 @@ Required clusters:
 - Academic catalogue
 - Curriculum templates
 - Course delivery
-- Enrolment and access
+- Enrollment and access
 - Sessions and attendance
 - Content and files
 - Assignments and assessment
