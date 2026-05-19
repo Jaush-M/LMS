@@ -85,6 +85,7 @@ model UserAccount {
   institutionalEmail     String            @unique
   status                 UserAccountStatus @default(INACTIVE)
   mustChangePassword     Boolean           @default(true)
+  reminderPeriodDays     Int?
   homeFacultyId          String?
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
@@ -442,8 +443,9 @@ model ChatMessage {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
-  attachments ChatMessageAttachment[]
-  sharedLinks ChatMessageSharedLink[]
+  attachments   ChatMessageAttachment[]
+  sharedLinks   ChatMessageSharedLink[]
+  notifications Notification[]
 }
 
 model ChatMessageAttachment {
@@ -624,6 +626,7 @@ enum NotificationSourceType {
   ASSIGNMENT
   COMPONENT_MARK
   FINAL_GRADE
+  CHAT_MENTION
 }
 
 model Notification {
@@ -641,6 +644,8 @@ model Notification {
   componentMark    ComponentMark?         @relation(fields: [componentMarkId], references: [id])
   finalGradeId     String?
   finalGrade       FinalGrade?            @relation(fields: [finalGradeId], references: [id])
+  chatMessageId    String?
+  chatMessage      ChatMessage?           @relation(fields: [chatMessageId], references: [id])
   title            String
   readAt           DateTime?
   createdAt        DateTime               @default(now())
