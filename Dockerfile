@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/
 
 # Create non-root user
 RUN useradd -m -u 1001 nextjs
+RUN mkdir -p /app/storage/uploads && chown -R nextjs:nodejs /app/storage
 
 # Copy built application from builder
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next

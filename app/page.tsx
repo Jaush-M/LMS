@@ -1,3 +1,11 @@
-export default function Home() {
-  return <div>Learning Management System</div>;
+import { redirect } from "next/navigation";
+
+import { getCurrentUser } from "@/lib/session";
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const currentUser = await getCurrentUser();
+
+  redirect(currentUser ? "/dashboard" : "/login");
 }
