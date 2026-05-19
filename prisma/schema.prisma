@@ -87,4 +87,34 @@ model UserAccount {
   mustChangePassword  Boolean           @default(true)
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
+  fileAssets          FileAsset[]
+}
+
+// ── File storage ───────────────────────────────────────────────────────────
+
+enum FileCategory {
+  CHAT_ATTACHMENT
+  SUBMISSION
+  CONTENT_ATTACHMENT
+  ANNOUNCEMENT_ATTACHMENT
+}
+
+enum FileAssetStatus {
+  ACTIVE
+  DELETED
+}
+
+model FileAsset {
+  id               String          @id @default(cuid())
+  storageDriver    String
+  storageKey       String          @unique
+  originalFilename String
+  mimeType         String
+  sizeBytes        Int
+  category         FileCategory
+  uploadedById     String
+  uploadedBy       UserAccount     @relation(fields: [uploadedById], references: [id])
+  status           FileAssetStatus @default(ACTIVE)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 }

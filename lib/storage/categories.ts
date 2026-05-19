@@ -1,0 +1,23 @@
+export type FileCategory =
+  | "CHAT_ATTACHMENT"
+  | "SUBMISSION"
+  | "CONTENT_ATTACHMENT"
+  | "ANNOUNCEMENT_ATTACHMENT";
+
+export const CATEGORY_SIZE_LIMITS: Record<FileCategory, number> = {
+  CHAT_ATTACHMENT: 8 * 1024 * 1024,
+  SUBMISSION: 25 * 1024 * 1024,
+  CONTENT_ATTACHMENT: 25 * 1024 * 1024,
+  ANNOUNCEMENT_ATTACHMENT: 25 * 1024 * 1024,
+};
+
+const CATEGORY_LIMIT_LABELS: Record<FileCategory, string> = {
+  CHAT_ATTACHMENT: "8 MB",
+  SUBMISSION: "25 MB",
+  CONTENT_ATTACHMENT: "25 MB",
+  ANNOUNCEMENT_ATTACHMENT: "25 MB",
+};
+
+export function limitLabel(category: FileCategory): string {
+  return CATEGORY_LIMIT_LABELS[category];
+}
