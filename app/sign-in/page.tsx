@@ -76,7 +76,7 @@ export default function SignInPage() {
               className="font-extrabold text-[17px] tracking-[-0.025em]"
               style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
             >
-              Villa LMS
+              LMS
             </span>
           </div>
           <DarkModeToggle />
@@ -231,7 +231,7 @@ export default function SignInPage() {
 
         {/* Footer */}
         <div className="mt-auto pt-6 flex items-center justify-between text-[11.5px]" style={{ color: "var(--ink-4)" }}>
-          <span>© 2026 Villa College</span>
+          <span>© 2026 LMS</span>
           <div className="flex gap-4">
             <a href="#" className="hover:text-ink" style={{ color: "var(--ink-3)" }}>Privacy</a>
             <a href="#" className="hover:text-ink" style={{ color: "var(--ink-3)" }}>Support</a>
@@ -301,7 +301,7 @@ export default function SignInPage() {
         </div>
 
         <div className="text-[12px] font-medium" style={{ color: "oklch(0.32 0.06 162)" }}>
-          Villa College · Learning Management System · Academic year 2025/26
+          Learning Management System · Academic year 2025/26
         </div>
       </div>
     </div>

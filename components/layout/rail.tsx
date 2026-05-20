@@ -83,7 +83,7 @@ export function Rail({ role }: RailProps) {
         </div>
         <div style={{ fontFamily: "var(--font-display)" }}>
           <div className="font-extrabold text-[17px] tracking-[-0.025em] text-ink">
-            Villa LMS
+            LMS
           </div>
           <div
             className="text-[10.5px] font-medium uppercase tracking-[0.08em] mt-px"

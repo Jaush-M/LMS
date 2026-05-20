@@ -4,7 +4,7 @@ This document captures the agreed product requirements for the college-style Lea
 
 ## Project Aim
 
-Build a full web-based Learning Management System for a Villa College-style academic environment. The system must improve on a basic Moodle-style platform through a guided learning dashboard, role-specific workflows, attendance visibility, structured academic setup, assignment and grading workflows, module group chat with targeted notifications, auditability, and strong administrative control.
+Build a full web-based Learning Management System for an academic environment. The system must improve on a basic Moodle-style platform through a guided learning dashboard, role-specific workflows, attendance visibility, structured academic setup, assignment and grading workflows, module group chat with targeted notifications, auditability, and strong administrative control.
 
 ## Primary Users
 

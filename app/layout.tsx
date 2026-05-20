@@ -11,8 +11,8 @@ const jakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Villa LMS",
-  description: "Learning Management System — Villa College",
+  title: "LMS",
+  description: "Learning Management System",
 };
 
 export default function RootLayout({
