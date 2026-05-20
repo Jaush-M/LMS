@@ -1,0 +1,72 @@
+@startuml er-chat-notifications
+skinparam linetype ortho
+title Cluster: Chat & Notifications
+
+entity "ModuleGroupChat" as MGC {
+  *id PK
+  --
+  *moduleOfferingId FK
+  status : active|read_only
+}
+
+entity "ChatMessage" as CM {
+  *id PK
+  --
+  *moduleGroupChatId FK
+  *senderId FK
+  body
+  status : active|removed
+  editedAt <<nullable>>
+  removedAt <<nullable>>
+  removedById FK <<nullable>>
+  moderationReason <<nullable>>
+}
+
+entity "Mention" as MEN {
+  *id PK
+  --
+  *chatMessageId FK
+  *mentionedUserId FK
+}
+
+entity "FileAsset" as FA {
+  *id PK
+  --
+  storageDriver
+  storageKey
+  category : chat_attachment|...
+  status
+}
+
+entity "SharedLink" as SL {
+  *id PK
+  --
+  url
+  label
+  createdById FK
+}
+
+entity "Notification" as NOTIF {
+  *id PK
+  --
+  *recipientId FK
+  type : mention|assignment_reminder|assignment_deadline_extension|released_mark|released_final_grade|published_content|announcement
+  title, body
+  readAt <<nullable>>
+  relatedEntityType
+  relatedEntityId
+}
+
+note right of CM
+  Removed messages preserved as
+  "[message removed]" markers.
+  Edit window: 15 minutes.
+end note
+
+MGC  ||--|{ CM   : "contains"
+CM   ||--o{ MEN  : "mentions"
+CM   ||--o{ FA   : "attachments"
+CM   ||--o{ SL   : "links"
+MEN  ..>  NOTIF  : "triggers"
+
+@enduml

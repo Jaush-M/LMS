@@ -1,0 +1,129 @@
+@startuml use-case
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+left to right direction
+
+actor Student as S
+actor Educator as E
+actor Administrator as A
+actor "Super Administrator" as SA
+
+rectangle "LMS — Identity & Access" {
+  usecase "Sign In" as UC_SIGNIN
+}
+
+rectangle "LMS — Student" {
+  usecase "View Guided Learning Dashboard" as UC_S1
+  usecase "View Module Content" as UC_S2
+  usecase "View Assignments" as UC_S3
+  usecase "Submit Assignment" as UC_S4
+  usecase "View Attendance" as UC_S5
+  usecase "View Released Marks and Final Grades" as UC_S6
+  usecase "View Academic Calendar" as UC_S7
+  usecase "View Announcements" as UC_S8
+  usecase "Use Module Group Chat" as UC_S9
+  usecase "Receive and Read Notifications" as UC_S10
+  usecase "Submit Module Feedback" as UC_S11
+}
+
+rectangle "LMS — Educator" {
+  usecase "View Educator Dashboard" as UC_E1
+  usecase "Manage Module Content" as UC_E2
+  usecase "Create and Publish Assignments" as UC_E3
+  usecase "Apply Assignment Deadline Extension" as UC_E4
+  usecase "Mark Submissions" as UC_E5
+  usecase "Enter Offline Assessment Marks" as UC_E6
+  usecase "Release Marks and Final Grades" as UC_E7
+  usecase "Mark Attendance" as UC_E8
+  usecase "Request Locked Attendance Correction" as UC_E9
+  usecase "Create Module Offering Events" as UC_E10
+  usecase "Create Module Offering Announcements" as UC_E11
+  usecase "Use Module Group Chat" as UC_E12
+  usecase "View Module Feedback Report" as UC_E13
+  usecase "Export Attendance and Marks" as UC_E14
+}
+
+rectangle "LMS — Administrator" {
+  usecase "Create Student and Educator Accounts" as UC_A1
+  usecase "Manage Faculties, Courses, Modules,\nIntakes, and Curriculum Templates" as UC_A2
+  usecase "Create Course Offerings and Module Offerings" as UC_A3
+  usecase "Assign Educators" as UC_A4
+  usecase "Create Class Sessions" as UC_A5
+  usecase "Enroll Students" as UC_A6
+  usecase "Import Enrollments by CSV" as UC_A7
+  usecase "Manage Module Enrollment Exceptions" as UC_A8
+  usecase "Manage Institution and Course Offering\nCalendar Events" as UC_A9
+  usecase "Create Institution and Course Offering\nAnnouncements" as UC_A10
+  usecase "Moderate Module Group Chat" as UC_A11
+  usecase "Correct Locked Attendance" as UC_A12
+  usecase "Approve Final Grade Corrections" as UC_A13
+  usecase "View Operational Audit Log" as UC_A14
+  usecase "Export Reports" as UC_A15
+  usecase "Archive Course Offerings" as UC_A16
+}
+
+rectangle "LMS — Super Administrator" {
+  usecase "Create and Manage Administrator Accounts" as UC_SA1
+  usecase "Manage System Settings" as UC_SA2
+  usecase "View System-Wide Dashboards and Records" as UC_SA3
+  usecase "View Operational and System Audit Logs" as UC_SA4
+  usecase "Create Institution-Wide Announcements" as UC_SA5
+  usecase "Export System-Wide Reports" as UC_SA6
+}
+
+S --> UC_SIGNIN
+E --> UC_SIGNIN
+A --> UC_SIGNIN
+SA --> UC_SIGNIN
+
+S --> UC_S1
+S --> UC_S2
+S --> UC_S3
+S --> UC_S4
+S --> UC_S5
+S --> UC_S6
+S --> UC_S7
+S --> UC_S8
+S --> UC_S9
+S --> UC_S10
+S --> UC_S11
+
+E --> UC_E1
+E --> UC_E2
+E --> UC_E3
+E --> UC_E4
+E --> UC_E5
+E --> UC_E6
+E --> UC_E7
+E --> UC_E8
+E --> UC_E9
+E --> UC_E10
+E --> UC_E11
+E --> UC_E12
+E --> UC_E13
+E --> UC_E14
+
+A --> UC_A1
+A --> UC_A2
+A --> UC_A3
+A --> UC_A4
+A --> UC_A5
+A --> UC_A6
+A --> UC_A7
+A --> UC_A8
+A --> UC_A9
+A --> UC_A10
+A --> UC_A11
+A --> UC_A12
+A --> UC_A13
+A --> UC_A14
+A --> UC_A15
+A --> UC_A16
+
+SA --> UC_SA1
+SA --> UC_SA2
+SA --> UC_SA3
+SA --> UC_SA4
+SA --> UC_SA5
+SA --> UC_SA6
+@enduml

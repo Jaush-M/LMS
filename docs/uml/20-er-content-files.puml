@@ -1,0 +1,58 @@
+@startuml er-content-files
+skinparam linetype ortho
+title Cluster: Content & Files
+
+entity "ContentSection" as CSEC {
+  *id PK
+  --
+  *moduleOfferingId FK
+  title
+  sortOrder
+  status : active|hidden
+}
+
+entity "ModuleContentItem" as MCI {
+  *id PK
+  --
+  *moduleOfferingId FK
+  *contentSectionId FK
+  title
+  bodyRichText
+  visibility : draft|published
+  sortOrder
+  publishedAt <<nullable>>
+}
+
+entity "FileAsset" as FA {
+  *id PK
+  --
+  storageDriver : local|s3
+  storageKey
+  originalFilename
+  mimeType
+  sizeBytes
+  category : chat_attachment|assignment_submission|module_content|assignment_attachment|announcement_attachment|feedback_attachment
+  uploadedById FK
+  status : active|removed|moderated
+}
+
+entity "SharedLink" as SL {
+  *id PK
+  --
+  url
+  label
+  createdById FK
+}
+
+note right of FA
+  File bytes stored in local disk
+  (dev) or S3-compatible object
+  storage (prod). Metadata only
+  in PostgreSQL.
+end note
+
+CSEC ||--|{ MCI  : "contains"
+MCI  ||--o{ FA   : "attached files"
+MCI  ||--o{ SL   : "shared links"
+
+@enduml

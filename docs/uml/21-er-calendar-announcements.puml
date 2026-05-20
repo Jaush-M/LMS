@@ -1,0 +1,45 @@
+@startuml er-calendar-announcements
+skinparam linetype ortho
+title Cluster: Calendar & Announcements
+
+entity "CalendarEvent" as CE {
+  *id PK
+  --
+  scope : institution|course_offering|module_offering
+  courseOfferingId FK <<nullable>>
+  moduleOfferingId FK <<nullable>>
+  title
+  description
+  startsAt
+  endsAt <<nullable>>
+  createdById FK
+}
+
+entity "Announcement" as ANN {
+  *id PK
+  --
+  scope : institution|course_offering|module_offering
+  courseOfferingId FK <<nullable>>
+  moduleOfferingId FK <<nullable>>
+  title
+  bodyRichText
+  expiresAt <<nullable>>
+  createdById FK
+}
+
+note bottom of CE
+  Derived calendar feed also includes:
+  - CourseOffering start/finish dates
+  - ModuleOffering start/finish dates
+  - ClassSession times
+  - Assignment deadlines
+end note
+
+note bottom of ANN
+  Announcements generate Notifications
+  for relevant users on creation.
+  Expired announcements drop from
+  active feeds.
+end note
+
+@enduml

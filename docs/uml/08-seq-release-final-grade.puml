@@ -1,0 +1,31 @@
+@startuml seq-release-final-grade
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Educator
+participant "LMS App" as App
+database "PostgreSQL" as DB
+participant "Notification Service" as NS
+participant "Audit Log" as AL
+
+Educator -> App : Open Module Offering grade view
+App -> DB : SELECT AssessmentComponents + ComponentMarks
+DB --> App : components with weightPercent and released marks
+App -> App : Check SUM(weightPercent) = 100%
+alt weights do not total 100%
+  App --> Educator : Cannot release — weights must total 100%
+else weights valid
+  App -> App : Calculate Provisional Final Grade:\n(Σ mark/maxMark × weight)
+  App --> Educator : Show provisional grade and pass status
+  Educator -> App : Confirm — Release Final Grade
+  App -> DB : UPSERT FinalGrade\n(percentage, passStatus, status=released, releasedAt=now)
+  DB --> App : finalGradeId
+  App -> NS : Notify Student\n(type=released_final_grade)
+  NS -> DB : INSERT Notification
+  DB --> NS : ok
+  NS --> App : ok
+  App -> AL : INSERT AuditLogEntry\n(action=final_grade_released)
+  AL --> App : ok
+  App --> Educator : Final grade released and student notified
+end
+@enduml

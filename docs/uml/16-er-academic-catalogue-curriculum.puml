@@ -1,0 +1,109 @@
+@startuml er-academic-catalogue-curriculum
+skinparam linetype ortho
+title Cluster: Academic Catalogue & Curriculum Templates
+
+entity "Faculty" as FAC {
+  *id PK
+  --
+  name
+  code
+  status : active|inactive
+}
+
+entity "AwardingBody" as AB {
+  *id PK
+  --
+  name
+  status : active|inactive
+}
+
+entity "Course" as CRS {
+  *id PK
+  --
+  *facultyId FK
+  awardingBodyId FK <<nullable>>
+  code : unique
+  name
+  awardLevel : foundation|diploma|degree|masters|phd
+  status : active|inactive
+}
+
+entity "Module" as MOD {
+  *id PK
+  --
+  code : unique
+  name
+  description
+  status : active|inactive
+}
+
+entity "Intake" as INT {
+  *id PK
+  --
+  name
+  status : active|inactive
+}
+
+entity "StudyMode" as SM {
+  *id PK
+  --
+  name
+  status : active|inactive
+}
+
+entity "CurriculumTemplate" as CT {
+  *id PK
+  --
+  *courseId FK
+  versionLabel
+  status : draft|active|inactive
+}
+
+entity "AcademicLevel" as AL {
+  *id PK
+  --
+  *curriculumTemplateId FK
+  label
+  sortOrder
+  expectedCredits <<nullable>>
+}
+
+entity "TemplateModule" as TM {
+  *id PK
+  --
+  *curriculumTemplateId FK
+  *academicLevelId FK
+  *moduleId FK
+  credits
+  sortOrder
+}
+
+entity "TemplateModulePrerequisite" as TMP {
+  *id PK
+  --
+  *templateModuleId FK
+  *prerequisiteTemplateModuleId FK
+}
+
+entity "DefaultAssessmentComponent" as DAC {
+  *id PK
+  --
+  *templateModuleId FK
+  title
+  type : online_assignment|offline_assessment
+  weightPercent
+  maximumMark
+  sortOrder
+}
+
+FAC      ||--|{ CRS  : "offers"
+AB       |o--|{ CRS  : "awards"
+CRS      ||--|| CT   : "has template"
+CT       ||--|{ AL   : "contains levels"
+CT       ||--|{ TM   : "lists modules"
+AL       ||--|{ TM   : "groups"
+MOD      ||--o{ TM   : "referenced by"
+TM       ||--o{ TMP  : "has prerequisites"
+TM       ||--o{ DAC  : "has default components"
+
+@enduml

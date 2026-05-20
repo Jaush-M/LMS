@@ -1,0 +1,72 @@
+@startuml activity-admin-course-offering-setup
+skinparam activityDiamondBackgroundColor #LightYellow
+skinparam activityBackgroundColor #LightBlue
+start
+
+:Administrator chooses Course and Intake;
+
+if (Course and Intake active?) then (no)
+  :Show error — inactive catalogue item;
+  stop
+else (yes)
+endif
+
+:Enter date range, capacity, and Study Mode;
+
+if (Dates valid (start < finish)?) then (no)
+  :Show date validation error;
+  stop
+else (yes)
+endif
+
+:Select Curriculum Template;
+
+if (CurriculumTemplate status = active?) then (no)
+  :Show error — template not active;
+  stop
+else (yes)
+endif
+
+:Create CourseOffering;
+
+:Generate ModuleOfferings from TemplateModules;
+:Create ModuleGroupChat per ModuleOffering;
+:Copy DefaultAssessmentComponents → AssessmentComponents;
+
+:Assign primary Educators to ModuleOfferings;
+
+if (All ModuleOfferings have an assigned Educator?) then (no)
+  :Show warning — unassigned modules;
+else (yes)
+endif
+
+:Confirm Assessment Structures;
+
+if (Assessment component weights valid\n(total = 100% per module)?) then (no)
+  :Show weight validation warning;
+else (yes)
+endif
+
+if (Capacity warning?) then (yes)
+  :Show capacity warning to Administrator;
+else (no)
+endif
+
+:Create ClassSessions per ModuleOffering;
+
+if (Module session dates inside CourseOffering dates?) then (no)
+  :Show timetable conflict warning;
+else (yes)
+endif
+
+fork
+  :Enroll Students manually;
+fork again
+  :Import Enrollments from CSV\n(preview → commit);
+end fork
+
+:CourseOffering status → planned or active;
+:AuditLogEntry recorded;
+stop
+
+@enduml

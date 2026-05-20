@@ -1,0 +1,114 @@
+@startuml er-assignments-assessment
+skinparam linetype ortho
+title Cluster: Assignments & Assessment
+
+entity "AssessmentComponent" as AC {
+  *id PK
+  --
+  *moduleOfferingId FK
+  title
+  type : online_assignment|offline_assessment
+  weightPercent
+  maximumMark
+  sortOrder
+  lockedAt <<nullable>>
+}
+
+entity "Assignment" as ASMT {
+  *id PK
+  --
+  *moduleOfferingId FK
+  *assessmentComponentId FK
+  contentSectionId FK <<nullable>>
+  title
+  instructionsRichText
+  deadlineAt
+  publishedAt <<nullable>>
+  status : draft|published|archived
+}
+
+entity "AssignmentDeadlineExtension" as ADE {
+  *id PK
+  --
+  *assignmentId FK
+  oldDeadlineAt
+  newDeadlineAt
+  reason
+  createdById FK
+  createdAt
+}
+
+entity "Submission" as SUB {
+  *id PK
+  --
+  *assignmentId FK
+  *studentId FK
+  submittedAt
+  status : submitted|late|marked
+  isActive : bool
+}
+
+entity "ComponentMark" as CM {
+  *id PK
+  --
+  *assessmentComponentId FK
+  *studentId FK
+  submissionId FK <<nullable>>
+  mark
+  feedback
+  status : draft|released
+  releasedAt <<nullable>>
+  markedById FK
+}
+
+entity "MarkCorrection" as MC {
+  *id PK
+  --
+  *componentMarkId FK
+  oldMark, newMark
+  reason
+  changedById FK
+  changedAt
+}
+
+entity "FinalGrade" as FG {
+  *id PK
+  --
+  *moduleOfferingId FK
+  *studentId FK
+  percentage
+  passStatus : pass|fail
+  status : provisional|released
+  releasedAt <<nullable>>
+}
+
+entity "FinalGradeCorrection" as FGC {
+  *id PK
+  --
+  *finalGradeId FK
+  oldPercentage, newPercentage
+  oldPassStatus, newPassStatus
+  reason
+  approvedById FK
+  changedAt
+}
+
+note right of AC
+  SUM(weightPercent) must equal 100%
+  before FinalGrade can be released.
+end note
+
+note bottom of SUB
+  One active Submission per
+  Student per Assignment.
+end note
+
+AC   ||--o| ASMT : "has assignment"
+ASMT ||--o{ ADE  : "extensions"
+ASMT ||--o{ SUB  : "receives"
+SUB  ||--o| CM   : "mark"
+AC   ||--o{ CM   : "component marks"
+CM   ||--o{ MC   : "corrections"
+FG   ||--o{ FGC  : "corrections"
+
+@enduml
