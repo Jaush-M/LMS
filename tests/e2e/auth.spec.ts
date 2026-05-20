@@ -17,12 +17,12 @@ const ROLES = [
   {
     email: "E000001@lms.edu.mv",
     dashboard: /\/educator\/dashboard/,
-    heading: /Educator Dashboard/i,
+    heading: /Guided Learning Dashboard/i,
   },
   {
     email: "S000001@lms.edu.mv",
     dashboard: /\/student\/dashboard/,
-    heading: /Student Dashboard/i,
+    heading: /Guided Learning Dashboard/i,
   },
 ];
 
