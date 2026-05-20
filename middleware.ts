@@ -11,7 +11,7 @@ const PROTECTED_PREFIXES = [
 
 const SESSION_COOKIE = "better-auth.session_token";
 
-export function proxy(request: NextRequest) {
+export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>
@@ -23,6 +23,8 @@ export function proxy(request: NextRequest) {
     signIn.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(signIn);
   }
+
+  return NextResponse.next();
 }
 
 export const config = {

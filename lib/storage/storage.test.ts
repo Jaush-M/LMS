@@ -5,6 +5,7 @@ import { join } from "path";
 import { validateFileSize } from "./validate-file-size";
 import { LocalDiskDriver } from "./local-driver";
 import { uploadFile } from "./upload-file";
+import type { PrismaClient } from "../generated/prisma/client";
 import type { StorageDriver } from "./driver";
 import { prisma } from "../prisma";
 import { S3Driver } from "./s3-driver";
@@ -113,7 +114,7 @@ describe("uploadFile", () => {
           uploadedById: "user-1",
         },
         driver,
-        {} as any
+        {} as unknown as PrismaClient
       )
     ).rejects.toThrow(/8 MB/);
     expect(driver.upload).not.toHaveBeenCalled();
