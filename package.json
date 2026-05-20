@@ -12,7 +12,9 @@
     "test:e2e": "playwright test",
     "db:migrate": "prisma migrate dev",
     "db:seed": "bun prisma/seed.ts",
+    "db:seed:demo": "bun prisma/seed.demo.ts",
     "db:reset": "prisma migrate reset --force && bun prisma/seed.ts",
+    "db:reset:demo": "prisma migrate reset --force && bun prisma/seed.demo.ts",
     "db:generate": "prisma generate"
   },
   "dependencies": {
