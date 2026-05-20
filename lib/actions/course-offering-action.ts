@@ -62,7 +62,7 @@ export async function createCourseOfferingAction(
       moduleOfferings,
     });
 
-    redirect(`/administrator/course-offerings/${offering.id}`);
+    redirect(`/admin/course-offerings/${offering.id}`);
   } catch (error) {
     if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw error;
     return { error: error instanceof Error ? error.message : "Failed to create Course Offering" };
@@ -100,7 +100,7 @@ export async function enrollStudentAction(
       return { status: "capacity_exceeded", currentCount: result.currentCount, capacity: result.capacity };
     }
 
-    redirect(`/administrator/course-offerings/${courseOfferingId}`);
+    redirect(`/admin/course-offerings/${courseOfferingId}`);
   } catch (error) {
     if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw error;
     return { status: "error", error: error instanceof Error ? error.message : "Enrollment failed" };
@@ -121,7 +121,7 @@ export async function archiveCourseOfferingAction(
 
     await archiveCourseOffering({ courseOfferingId, archivedById: actor.id });
 
-    redirect(`/administrator/course-offerings/${courseOfferingId}`);
+    redirect(`/admin/course-offerings/${courseOfferingId}`);
   } catch (error) {
     if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw error;
     return { error: error instanceof Error ? error.message : "Archive failed" };

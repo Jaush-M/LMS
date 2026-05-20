@@ -49,7 +49,7 @@ export async function createFacultyAction(_prev: ActionState, formData: FormData
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await createFaculty({ name });
-    revalidatePath("/administrator/catalogue/faculties");
+    revalidatePath("/admin/catalogue/faculties");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -63,7 +63,7 @@ export async function editFacultyAction(_prev: ActionState, formData: FormData):
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await editFaculty(id, { name });
-    revalidatePath("/administrator/catalogue/faculties");
+    revalidatePath("/admin/catalogue/faculties");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -73,7 +73,7 @@ export async function editFacultyAction(_prev: ActionState, formData: FormData):
 export async function markFacultyInactiveAction(id: string): Promise<void> {
   await requireAdministrator();
   await markFacultyInactive(id);
-  revalidatePath("/administrator/catalogue/faculties");
+  revalidatePath("/admin/catalogue/faculties");
 }
 
 // ── Course ────────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ export async function createCourseAction(_prev: ActionState, formData: FormData)
     if (!facultyId) return { error: "Faculty is required" };
 
     await createCourse({ code, name, awardLevel, facultyId, awardingBody });
-    revalidatePath("/administrator/catalogue/courses");
+    revalidatePath("/admin/catalogue/courses");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -116,7 +116,7 @@ export async function editCourseAction(_prev: ActionState, formData: FormData): 
     if (!facultyId) return { error: "Faculty is required" };
 
     await editCourse(id, { name, awardLevel, facultyId, awardingBody });
-    revalidatePath("/administrator/catalogue/courses");
+    revalidatePath("/admin/catalogue/courses");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -126,7 +126,7 @@ export async function editCourseAction(_prev: ActionState, formData: FormData): 
 export async function markCourseInactiveAction(id: string): Promise<void> {
   await requireAdministrator();
   await markCourseInactive(id);
-  revalidatePath("/administrator/catalogue/courses");
+  revalidatePath("/admin/catalogue/courses");
 }
 
 // ── Module ────────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ export async function createModuleAction(_prev: ActionState, formData: FormData)
     if (!name) return { error: "Name is required" };
 
     await createModule({ code, name, description });
-    revalidatePath("/administrator/catalogue/modules");
+    revalidatePath("/admin/catalogue/modules");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -159,7 +159,7 @@ export async function editModuleAction(_prev: ActionState, formData: FormData): 
     if (!name) return { error: "Name is required" };
 
     await editModule(id, { name, description });
-    revalidatePath("/administrator/catalogue/modules");
+    revalidatePath("/admin/catalogue/modules");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -169,7 +169,7 @@ export async function editModuleAction(_prev: ActionState, formData: FormData): 
 export async function markModuleInactiveAction(id: string): Promise<void> {
   await requireAdministrator();
   await markModuleInactive(id);
-  revalidatePath("/administrator/catalogue/modules");
+  revalidatePath("/admin/catalogue/modules");
 }
 
 // ── Intake ────────────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ export async function createIntakeAction(_prev: ActionState, formData: FormData)
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await createIntake({ name });
-    revalidatePath("/administrator/catalogue/intakes");
+    revalidatePath("/admin/catalogue/intakes");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -194,7 +194,7 @@ export async function editIntakeAction(_prev: ActionState, formData: FormData): 
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await editIntake(id, { name });
-    revalidatePath("/administrator/catalogue/intakes");
+    revalidatePath("/admin/catalogue/intakes");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -204,7 +204,7 @@ export async function editIntakeAction(_prev: ActionState, formData: FormData): 
 export async function markIntakeInactiveAction(id: string): Promise<void> {
   await requireAdministrator();
   await markIntakeInactive(id);
-  revalidatePath("/administrator/catalogue/intakes");
+  revalidatePath("/admin/catalogue/intakes");
 }
 
 // ── StudyMode ─────────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ export async function createStudyModeAction(_prev: ActionState, formData: FormDa
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await createStudyMode({ name });
-    revalidatePath("/administrator/catalogue/study-modes");
+    revalidatePath("/admin/catalogue/study-modes");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -229,7 +229,7 @@ export async function editStudyModeAction(_prev: ActionState, formData: FormData
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await editStudyMode(id, { name });
-    revalidatePath("/administrator/catalogue/study-modes");
+    revalidatePath("/admin/catalogue/study-modes");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -239,7 +239,7 @@ export async function editStudyModeAction(_prev: ActionState, formData: FormData
 export async function markStudyModeInactiveAction(id: string): Promise<void> {
   await requireAdministrator();
   await markStudyModeInactive(id);
-  revalidatePath("/administrator/catalogue/study-modes");
+  revalidatePath("/admin/catalogue/study-modes");
 }
 
 // ── SessionType ───────────────────────────────────────────────────────────
@@ -250,7 +250,7 @@ export async function createSessionTypeAction(_prev: ActionState, formData: Form
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await createSessionType({ name });
-    revalidatePath("/administrator/catalogue/session-types");
+    revalidatePath("/admin/catalogue/session-types");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -264,7 +264,7 @@ export async function editSessionTypeAction(_prev: ActionState, formData: FormDa
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await editSessionType(id, { name });
-    revalidatePath("/administrator/catalogue/session-types");
+    revalidatePath("/admin/catalogue/session-types");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -274,5 +274,5 @@ export async function editSessionTypeAction(_prev: ActionState, formData: FormDa
 export async function markSessionTypeInactiveAction(id: string): Promise<void> {
   await requireAdministrator();
   await markSessionTypeInactive(id);
-  revalidatePath("/administrator/catalogue/session-types");
+  revalidatePath("/admin/catalogue/session-types");
 }

@@ -44,6 +44,6 @@ export async function updateSystemSettingsAction(
   };
 
   await updateSystemSettings(actor.id, updates);
-  revalidatePath("/super-administrator/system-settings");
+  revalidatePath("/admin/system-settings");
   return { success: true };
 }

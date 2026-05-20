@@ -15,7 +15,7 @@ async function signInAsAdmin(page: Parameters<Parameters<typeof test>[1]>[0]) {
 test.describe("Course Offering list (TC-003)", () => {
   test("Administrator sees the seeded course offerings in the list", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/administrator/course-offerings");
+    await page.goto("/admin/course-offerings");
 
     await expect(page.getByRole("heading", { name: /Course Offerings/i })).toBeVisible();
     await expect(page.getByText("BSc CS — January 2025")).toBeVisible();
@@ -27,7 +27,7 @@ test.describe("Course Offering list (TC-003)", () => {
 test.describe("Course Offering creation — TC-003", () => {
   test("Administrator creates a Course Offering from a Curriculum Template", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/administrator/course-offerings/new");
+    await page.goto("/admin/course-offerings/new");
 
     await expect(page.getByRole("heading", { name: /Create Course Offering/i })).toBeVisible();
 
@@ -50,7 +50,7 @@ test.describe("Course Offering creation — TC-003", () => {
     await page.getByRole("button", { name: "Create Course Offering" }).click();
 
     // redirected to the new offering's detail page
-    await expect(page).toHaveURL(/\/administrator\/course-offerings\/[^/]+$/);
+    await expect(page).toHaveURL(/\/admin\/course-offerings\/[^/]+$/);
     await expect(page.getByText("BSc CS — September 2025")).toBeVisible();
 
     // module offerings generated from template
@@ -66,14 +66,14 @@ test.describe("Enrollment capacity warning and override — TC-004", () => {
     await signInAsAdmin(page);
 
     // navigate to the full-capacity offering (BSc CS — January 2025, capacity 2, 2 enrolled)
-    await page.goto("/administrator/course-offerings");
+    await page.goto("/admin/course-offerings");
     await page.getByRole("link", { name: "BSc CS — January 2025" }).click();
 
-    await expect(page).toHaveURL(/\/administrator\/course-offerings\/[^/]+$/);
+    await expect(page).toHaveURL(/\/admin\/course-offerings\/[^/]+$/);
 
     // click Enroll Student
     await page.getByRole("link", { name: /Enroll/i }).click();
-    await expect(page).toHaveURL(/\/administrator\/course-offerings\/[^/]+\/enroll$/);
+    await expect(page).toHaveURL(/\/admin\/course-offerings\/[^/]+\/enroll$/);
 
     // select the third student (S000007)
     await page.getByLabel("Student").selectOption({ label: "Enrollment Test Student (S000007)" });
@@ -88,7 +88,7 @@ test.describe("Enrollment capacity warning and override — TC-004", () => {
     await page.getByRole("button", { name: "Confirm enrollment with override" }).click();
 
     // back on detail page, enrollment listed
-    await expect(page).toHaveURL(/\/administrator\/course-offerings\/[^/]+$/);
+    await expect(page).toHaveURL(/\/admin\/course-offerings\/[^/]+$/);
     await expect(page.getByText("Enrollment Test Student")).toBeVisible();
   });
 });
@@ -98,7 +98,7 @@ test.describe("Enrollment capacity warning and override — TC-004", () => {
 test.describe("CSV enrollment import — TC-005", () => {
   test("Administrator uploads CSV, sees preview, and commits valid rows", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/administrator/enrollment-import");
+    await page.goto("/admin/enrollment-import");
 
     await expect(page.getByRole("heading", { name: /Enrollment Import/i })).toBeVisible();
 

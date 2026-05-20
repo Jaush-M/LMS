@@ -40,5 +40,5 @@ export async function createClassSessionAction(_prev: unknown, formData: FormDat
     if ((e as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw e;
     return { error: (e as Error).message };
   }
-  redirect(`/administrator/course-offerings/${courseOfferingId}/sessions`);
+  redirect(`/admin/course-offerings/${courseOfferingId}/sessions`);
 }

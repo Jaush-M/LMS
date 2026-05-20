@@ -30,7 +30,7 @@ export async function openFeedbackPeriodAction(_prev: unknown, formData: FormDat
     if ((e as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw e;
     return { error: (e as Error).message };
   }
-  redirect(`/administrator/course-offerings/${courseOfferingId}`);
+  redirect(`/admin/course-offerings/${courseOfferingId}`);
 }
 
 export async function submitFeedbackResponseAction(_prev: unknown, formData: FormData) {
