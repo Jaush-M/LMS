@@ -17,6 +17,7 @@ export default async function AdministratorAccountsPage() {
       institutionalEmail: true,
       role: true,
       status: true,
+      user: { select: { name: true } },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -67,7 +68,7 @@ export default async function AdministratorAccountsPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                  {["Identifier", "Institutional email", "Role", "Status", "Actions"].map((h) => (
+                  {["Name", "Identifier", "Institutional email", "Role", "Status", "Actions"].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -88,7 +89,7 @@ export default async function AdministratorAccountsPage() {
               </thead>
               <tbody>
                 {accounts.map((account) => (
-                  <AccountRow key={account.id} account={account} />
+                  <AccountRow key={account.id} account={{ id: account.id, name: account.user.name, generatedIdentifier: account.generatedIdentifier, institutionalEmail: account.institutionalEmail, role: account.role, status: account.status }} />
                 ))}
               </tbody>
             </table>

@@ -10,6 +10,7 @@ import { Chip } from "@/components/ui/chip";
 
 type Account = {
   id: string;
+  name: string;
   generatedIdentifier: string;
   institutionalEmail: string;
   role: string;
@@ -65,6 +66,9 @@ export function AccountRow({ account }: { account: Account }) {
 
   return (
     <tr style={{ borderBottom: "1px solid var(--line-2)" }}>
+      <td style={{ padding: "11px 20px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+        {account.name}
+      </td>
       <td style={{ padding: "11px 20px", fontFamily: "monospace", fontSize: 12.5, color: "var(--ink-2)", fontWeight: 600 }}>
         {account.generatedIdentifier}
       </td>
