@@ -257,10 +257,10 @@ export default function SignInPage() {
         <div className="flex-1 relative my-6">
           <div
             className="absolute top-[10%] left-0 right-0"
-            style={{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)", borderRadius: 18, border: "1px solid rgba(255,255,255,0.6)", padding: "18px 20px", maxWidth: 340, boxShadow: "0 24px 48px -20px rgba(20, 50, 35, 0.18)" }}
+            style={{ background: "var(--surface)", backdropFilter: "blur(8px)", borderRadius: 18, border: "1px solid rgba(255,255,255,0.6)", padding: "18px 20px", maxWidth: 340, boxShadow: "0 24px 48px -20px rgba(20, 50, 35, 0.18)" }}
           >
-            <p className="text-[14.5px] leading-relaxed font-medium m-0" style={{ color: "oklch(0.22 0.04 160)" }}>
-              "The guided dashboard keeps my attention items front and center — I never miss a deadline."
+            <p className="text-[14.5px] leading-relaxed font-medium m-0" style={{ color: "var(--ink)" }}>
+              &quot;The guided dashboard keeps my attention items front and center — I never miss a deadline.&quot;
             </p>
             <div className="flex items-center gap-2.5 mt-3.5">
               <div className="w-8 h-8 rounded-full grid place-items-center text-[11px] font-bold flex-shrink-0" style={{ background: "var(--lav)", color: "var(--lav-ink)" }}>
