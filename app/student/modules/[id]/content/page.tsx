@@ -2,11 +2,13 @@ import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { listModuleContent } from "@/lib/module-content";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty";
 
 export default async function StudentContentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-
   const { account } = await requireAuthPage({ roles: ["STUDENT"] });
 
   const mo = await prisma.moduleOffering.findUnique({
@@ -23,38 +25,53 @@ export default async function StudentContentPage({ params }: { params: Promise<{
   }
 
   return (
-    <main className="p-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Content — {mo.templateModule.module.name}</h1>
-        <Link href={`/student/modules/${id}`} className="text-sm text-blue-600 underline">Back to module</Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Link href={`/student/modules/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--ink-3)", textDecoration: "none", width: "fit-content" }} className="module-back-link">
+        <ChevronLeft size={15} />
+        {mo.templateModule.module.name}
+      </Link>
+
+      <div>
+        <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+          Content
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>{mo.templateModule.module.name}</p>
       </div>
 
       {sections.length === 0 ? (
-        <p className="text-sm text-gray-500">No content published yet.</p>
+        <EmptyState title="No content yet" body="Your educator hasn't published any content for this module." />
       ) : (
-        <div className="space-y-6">
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {sections.map((section) => (
             <div key={section.id}>
-              <h2 className="font-semibold text-gray-700 mb-2">{section.title}</h2>
+              <div
+                className="text-[11px] uppercase tracking-[0.1em] font-bold mb-3"
+                style={{ color: "var(--ink-4)" }}
+              >
+                {section.title}
+              </div>
               {section.contentItems.length === 0 ? (
-                <p className="text-sm text-gray-400">No published items in this section.</p>
+                <p style={{ fontSize: 13, color: "var(--ink-4)" }}>No published items in this section.</p>
               ) : (
-                <ul className="space-y-2">
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {section.contentItems.map((item) => (
-                    <li key={item.id} className="rounded border border-gray-200 bg-white px-5 py-4">
-                      <h3 className="font-medium text-gray-800">{item.title}</h3>
-                      <div
-                        className="mt-2 text-sm text-gray-600 prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: item.body }}
-                      />
-                    </li>
+                    <Card key={item.id}>
+                      <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)" }}>{item.title}</div>
+                      {item.body && (
+                        <div
+                          className="prose prose-sm max-w-none mt-3"
+                          style={{ fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.65 }}
+                          dangerouslySetInnerHTML={{ __html: item.body }}
+                        />
+                      )}
+                    </Card>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

@@ -8,14 +8,16 @@ export default async function SystemSettingsPage() {
   const settings = await getSystemSettings();
 
   return (
-    <main className="p-8">
-      <h1 className="text-2xl font-semibold">System Settings</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        Changes are logged to the Audit Log with before and after values.
-      </p>
-      <div className="mt-6">
-        <SystemSettingsForm settings={settings} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div>
+        <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+          System Settings
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>
+          Changes are logged to the Audit Log with before and after values.
+        </p>
       </div>
-    </main>
+      <SystemSettingsForm settings={settings} />
+    </div>
   );
 }

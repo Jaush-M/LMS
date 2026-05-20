@@ -2,6 +2,18 @@
 
 import { useActionState } from "react";
 import { createStudentOrEducatorAction } from "@/lib/actions/create-account-action";
+import { CheckCircle } from "lucide-react";
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  borderRadius: 10,
+  border: "1px solid var(--line)",
+  background: "var(--surface)",
+  color: "var(--ink)",
+  fontSize: 14,
+  padding: "10px 12px",
+  outline: "none",
+};
 
 export function CreateAccountForm() {
   const [state, action, pending] = useActionState(
@@ -12,23 +24,38 @@ export function CreateAccountForm() {
   if (state?.result) {
     const { identifier, institutionalEmail, temporaryPassword } = state.result;
     return (
-      <div className="space-y-4 rounded border p-4">
-        <h2 className="font-semibold text-green-700">Account created</h2>
-        <dl className="space-y-2 text-sm">
-          <div>
-            <dt className="font-medium">Identifier</dt>
-            <dd className="font-mono">{identifier}</dd>
-          </div>
-          <div>
-            <dt className="font-medium">Institutional email</dt>
-            <dd className="font-mono">{institutionalEmail}</dd>
-          </div>
-          <div>
-            <dt className="font-medium">Temporary password</dt>
-            <dd className="font-mono">{temporaryPassword}</dd>
-          </div>
-        </dl>
-        <p className="text-xs text-gray-500">
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--ok)", fontWeight: 700, fontSize: 15 }}>
+          <CheckCircle size={20} />
+          Account created
+        </div>
+        <div
+          style={{
+            padding: 18,
+            borderRadius: 14,
+            border: "1px solid var(--line)",
+            background: "var(--surface-2)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          {[
+            { label: "Identifier", value: identifier },
+            { label: "Institutional email", value: institutionalEmail },
+            { label: "Temporary password", value: temporaryPassword },
+          ].map(({ label, value }) => (
+            <div key={label}>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: "var(--ink-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>
+                {label}
+              </div>
+              <div style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.02em" }}>
+                {value}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 12, color: "var(--ink-4)" }}>
           Share these credentials securely. The password must be changed on first sign-in.
         </p>
       </div>
@@ -36,43 +63,42 @@ export function CreateAccountForm() {
   }
 
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {state?.error && (
-        <div role="alert" className="rounded bg-red-50 p-3 text-sm text-red-700">
+        <div role="alert" style={{ padding: "10px 14px", borderRadius: 10, background: "var(--bad-soft)", color: "var(--bad)", fontSize: 13, fontWeight: 500 }}>
           {state.error}
         </div>
       )}
-      <div className="space-y-1">
-        <label htmlFor="name" className="block text-sm font-medium">
-          Full name
-        </label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          required
-          className="w-full rounded border px-3 py-2 text-sm"
-        />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label htmlFor="name" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>Full name</label>
+        <input id="name" name="name" type="text" required style={inputStyle} />
       </div>
-      <div className="space-y-1">
-        <label htmlFor="role" className="block text-sm font-medium">
-          Role
-        </label>
-        <select
-          id="role"
-          name="role"
-          required
-          className="w-full rounded border px-3 py-2 text-sm"
-        >
-          <option value="">Select a role</option>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label htmlFor="role" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>Role</label>
+        <select id="role" name="role" required style={inputStyle}>
+          <option value="">Select a role…</option>
           <option value="STUDENT">Student</option>
           <option value="EDUCATOR">Educator</option>
         </select>
       </div>
+
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        style={{
+          padding: "10px 20px",
+          borderRadius: 10,
+          background: pending ? "var(--primary-deep)" : "var(--primary-strong)",
+          color: "#fff",
+          fontSize: 14,
+          fontWeight: 700,
+          border: "none",
+          cursor: pending ? "default" : "pointer",
+          opacity: pending ? 0.7 : 1,
+          boxShadow: "0 4px 12px -4px oklch(0.5 0.15 162 / 0.45)",
+        }}
       >
         {pending ? "Creating…" : "Create account"}
       </button>

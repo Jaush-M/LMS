@@ -2,11 +2,26 @@ import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { ChatForm } from "./chat-form";
+import { Avatar } from "@/components/ui/avatar";
+import { EmptyState } from "@/components/ui/empty";
+
+const AVATAR_TONES = ["lav", "peach", "sky", "rose", "lemon", "sand", "mint", ""] as const;
+type AvatarTone = (typeof AVATAR_TONES)[number];
+
+function toneForName(name: string): AvatarTone {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_TONES[h % AVATAR_TONES.length];
+}
+
+function initials(name: string) {
+  return name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+}
 
 export default async function EducatorChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-
   const { account } = await requireAuthPage({ roles: ["EDUCATOR"] });
 
   const mo = await prisma.moduleOffering.findUnique({
@@ -25,7 +40,6 @@ export default async function EducatorChatPage({ params }: { params: Promise<{ i
     take: 100,
   });
 
-  // Mark last seen
   await prisma.chatParticipantActivity.upsert({
     where: { chatId_userId: { chatId: mo.moduleGroupChat.id, userId: account.id } },
     update: { lastSeenAt: new Date() },
@@ -33,40 +47,64 @@ export default async function EducatorChatPage({ params }: { params: Promise<{ i
   });
 
   return (
-    <main className="p-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Chat — {mo.templateModule.module.name}</h1>
-        <Link href={`/educator/modules/${id}`} className="text-sm text-blue-600 underline">Back to module</Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Link href={`/educator/modules/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--ink-3)", textDecoration: "none", width: "fit-content" }} className="module-back-link">
+        <ChevronLeft size={15} />
+        {mo.templateModule.module.name}
+      </Link>
+
+      <div>
+        <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+          Group Chat
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>{mo.templateModule.module.name}</p>
       </div>
 
-      <div className="rounded border border-gray-200 bg-white min-h-64 mb-4">
+      <div style={{ borderRadius: 16, border: "1px solid var(--line)", background: "var(--surface)", minHeight: 280, overflow: "hidden" }}>
         {messages.length === 0 ? (
-          <p className="p-5 text-sm text-gray-400">No messages yet. Start the conversation!</p>
+          <div style={{ padding: 24 }}>
+            <EmptyState title="No messages yet" body="Start the conversation below." />
+          </div>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <div style={{ display: "flex", flexDirection: "column" }}>
             {messages.map((msg) => {
               const isMe = msg.senderId === account.id;
+              const senderName = msg.sender.user.name;
               return (
-                <li key={msg.id} className={`px-5 py-3 ${isMe ? "bg-blue-50" : ""}`}>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-medium text-gray-800">{msg.sender.user.name}</span>
-                    <span className="text-xs text-gray-400">{msg.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                    {msg.status === "EDITED" && <span className="text-xs text-gray-400">(edited)</span>}
+                <div
+                  key={msg.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    padding: "12px 16px",
+                    borderBottom: "1px solid var(--line-2)",
+                    background: isMe ? "var(--primary-softer)" : "transparent",
+                  }}
+                >
+                  <Avatar initials={initials(senderName)} tone={toneForName(senderName)} size="sm" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{senderName}</span>
+                      <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
+                        {msg.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      {msg.status === "EDITED" && <span style={{ fontSize: 11, color: "var(--ink-4)" }}>(edited)</span>}
+                    </div>
+                    <p style={{ fontSize: 13.5, color: "var(--ink-2)", marginTop: 2, lineHeight: 1.5 }}>{msg.body}</p>
                   </div>
-                  <p className="text-sm text-gray-700 mt-0.5">{msg.body}</p>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
         )}
       </div>
 
-      {!mo.moduleGroupChat.isReadOnly && (
+      {!mo.moduleGroupChat.isReadOnly ? (
         <ChatForm chatId={mo.moduleGroupChat.id} moduleOfferingId={id} senderId={account.id} />
+      ) : (
+        <p style={{ fontSize: 13, color: "var(--ink-4)", fontStyle: "italic" }}>Chat is read-only.</p>
       )}
-      {mo.moduleGroupChat.isReadOnly && (
-        <p className="text-sm text-gray-400 italic">Chat is read-only.</p>
-      )}
-    </main>
+    </div>
   );
 }

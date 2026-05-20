@@ -1,26 +1,333 @@
 @import "tailwindcss";
 
+/* =====================================================================
+   VILLA LMS — Design Token System
+   Primary: sage/mint. Surfaces: warm off-white. Accents: lavender, peach, sky.
+   ===================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --bg: oklch(0.985 0.005 140);
+  --bg-2: oklch(0.97 0.008 140);
+  --surface: #ffffff;
+  --surface-2: oklch(0.975 0.012 145);
+  --surface-3: oklch(0.955 0.018 145);
+  --surface-card: #ffffff;
+  --topbar-bg: oklch(0.985 0.005 140 / 0.85);
+
+  /* Ink */
+  --ink: oklch(0.22 0.02 160);
+  --ink-2: oklch(0.36 0.018 160);
+  --ink-3: oklch(0.52 0.015 160);
+  --ink-4: oklch(0.68 0.012 160);
+
+  /* Lines */
+  --line: oklch(0.92 0.012 150);
+  --line-2: oklch(0.88 0.018 150);
+  --line-3: oklch(0.82 0.022 150);
+
+  /* Primary — sage/mint */
+  --primary: oklch(0.78 0.11 160);
+  --primary-strong: oklch(0.62 0.13 162);
+  --primary-deep: oklch(0.42 0.12 162);
+  --primary-soft: oklch(0.93 0.06 160);
+  --primary-softer: oklch(0.965 0.03 160);
+  --primary-ink: oklch(0.22 0.06 160);
+
+  /* Accents */
+  --lav: oklch(0.93 0.05 295);
+  --lav-ink: oklch(0.45 0.13 295);
+  --peach: oklch(0.93 0.06 50);
+  --peach-ink: oklch(0.5 0.13 50);
+  --sky: oklch(0.93 0.05 230);
+  --sky-ink: oklch(0.45 0.12 230);
+  --rose: oklch(0.93 0.06 10);
+  --rose-ink: oklch(0.52 0.14 10);
+  --lemon: oklch(0.95 0.07 100);
+  --lemon-ink: oklch(0.45 0.12 100);
+  --sand: oklch(0.94 0.025 75);
+  --sand-ink: oklch(0.45 0.05 75);
+
+  /* Semantic */
+  --ok: oklch(0.62 0.14 155);
+  --ok-soft: oklch(0.93 0.06 155);
+  --warn: oklch(0.72 0.14 75);
+  --warn-soft: oklch(0.95 0.06 75);
+  --bad: oklch(0.6 0.17 25);
+  --bad-soft: oklch(0.95 0.04 25);
+  --info: oklch(0.6 0.13 235);
+  --info-soft: oklch(0.95 0.04 235);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(20, 50, 35, 0.04);
+  --shadow-md: 0 4px 14px -6px rgba(20, 50, 35, 0.08), 0 2px 4px -2px rgba(20, 50, 35, 0.04);
+  --shadow-lg: 0 24px 48px -20px rgba(20, 50, 35, 0.18), 0 8px 16px -10px rgba(20, 50, 35, 0.08);
+
+  /* Layout */
+  --rail-w: 248px;
+  --topbar-h: 76px;
 }
 
+/* =====================================================================
+   TAILWIND v4 THEME — exposes CSS vars as utility classes
+   ===================================================================== */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Surfaces */
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-card: var(--surface-card);
+
+  /* Ink */
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+
+  /* Lines */
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-line-3: var(--line-3);
+
+  /* Primary */
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-deep: var(--primary-deep);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-softer: var(--primary-softer);
+
+  /* Accents */
+  --color-lav: var(--lav);
+  --color-lav-ink: var(--lav-ink);
+  --color-peach: var(--peach);
+  --color-peach-ink: var(--peach-ink);
+  --color-sky: var(--sky);
+  --color-sky-ink: var(--sky-ink);
+  --color-rose: var(--rose);
+  --color-rose-ink: var(--rose-ink);
+  --color-lemon: var(--lemon);
+  --color-lemon-ink: var(--lemon-ink);
+  --color-sand: var(--sand);
+  --color-sand-ink: var(--sand-ink);
+
+  /* Semantic */
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  /* Fonts */
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-code: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* =====================================================================
+   BASE
+   ===================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--primary-soft);
+  color: var(--ink);
+}
+
+*:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* =====================================================================
+   SCROLLBARS
+   ===================================================================== */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: oklch(0.88 0.014 160);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* =====================================================================
+   APP SHELL
+   ===================================================================== */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--rail-w) 1fr;
+  min-height: 100vh;
+}
+
+/* =====================================================================
+   RAIL (SIDEBAR)
+   ===================================================================== */
+.rail {
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* =====================================================================
+   TOPBAR
+   ===================================================================== */
+.topbar {
+  height: var(--topbar-h);
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 32px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: saturate(140%) blur(8px);
+}
+
+/* =====================================================================
+   CANVAS
+   ===================================================================== */
+.canvas {
+  padding: 26px 32px 80px;
+  width: 100%;
+}
+
+.module-back-link:hover {
+  color: var(--ink);
+}
+
+.module-card-link:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 14px -6px oklch(0.5 0.12 162 / 0.18);
+}
+
+.quick-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px;
+  border-radius: 9px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.quick-link:hover {
+  background: var(--surface-2);
+}
+
+/* =====================================================================
+   DARK MODE
+   ===================================================================== */
+[data-theme="dark"] {
+  --bg: oklch(0.16 0.012 160);
+  --bg-2: oklch(0.185 0.012 160);
+  --surface: oklch(0.215 0.014 160);
+  --surface-2: oklch(0.255 0.016 160);
+  --surface-3: oklch(0.305 0.018 160);
+  --surface-card: oklch(0.215 0.014 160);
+  --topbar-bg: oklch(0.18 0.012 160 / 0.85);
+  --ink: oklch(0.96 0.005 160);
+  --ink-2: oklch(0.85 0.008 160);
+  --ink-3: oklch(0.68 0.012 160);
+  --ink-4: oklch(0.55 0.014 160);
+  --line: oklch(0.32 0.014 160);
+  --line-2: oklch(0.4 0.018 160);
+  --line-3: oklch(0.5 0.022 160);
+  --primary: oklch(0.78 0.13 162);
+  --primary-strong: oklch(0.72 0.14 162);
+  --primary-deep: oklch(0.88 0.13 162);
+  --primary-soft: oklch(0.32 0.08 162);
+  --primary-softer: oklch(0.26 0.04 162);
+  --lav: oklch(0.32 0.08 295);
+  --lav-ink: oklch(0.85 0.1 295);
+  --peach: oklch(0.32 0.09 50);
+  --peach-ink: oklch(0.86 0.11 50);
+  --sky: oklch(0.32 0.08 230);
+  --sky-ink: oklch(0.85 0.1 230);
+  --rose: oklch(0.32 0.1 10);
+  --rose-ink: oklch(0.85 0.12 10);
+  --lemon: oklch(0.32 0.1 100);
+  --lemon-ink: oklch(0.88 0.12 100);
+  --sand: oklch(0.32 0.04 75);
+  --sand-ink: oklch(0.82 0.04 75);
+  --ok: oklch(0.82 0.13 155);
+  --ok-soft: oklch(0.3 0.08 155);
+  --warn: oklch(0.84 0.13 75);
+  --warn-soft: oklch(0.32 0.1 75);
+  --bad: oklch(0.78 0.15 25);
+  --bad-soft: oklch(0.3 0.1 25);
+  --info: oklch(0.82 0.12 235);
+  --info-soft: oklch(0.3 0.08 235);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 14px -6px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 24px 48px -20px rgba(0, 0, 0, 0.65), 0 8px 16px -10px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .rail {
+  background: var(--bg-2);
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-thumb {
+  background: oklch(0.32 0.014 160);
+  border: 2px solid var(--bg);
 }

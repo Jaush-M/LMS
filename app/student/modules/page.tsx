@@ -1,6 +1,8 @@
 import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { BookOpen, ArrowRight } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty";
 
 export default async function StudentModulesPage() {
   const { account } = await requireAuthPage({ roles: ["STUDENT"] });
@@ -18,36 +20,101 @@ export default async function StudentModulesPage() {
     },
   });
 
+  const MODULE_TONES = [
+    { bg: "var(--lav)", fg: "var(--lav-ink)" },
+    { bg: "var(--peach)", fg: "var(--peach-ink)" },
+    { bg: "var(--sky)", fg: "var(--sky-ink)" },
+    { bg: "var(--rose)", fg: "var(--rose-ink)" },
+    { bg: "var(--lemon)", fg: "var(--lemon-ink)" },
+    { bg: "var(--primary-soft)", fg: "var(--primary-deep)" },
+  ];
+
   return (
-    <main className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">My Modules</h1>
-        <Link href="/student/dashboard" className="text-sm text-blue-600 underline">Dashboard</Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div>
+        <h1
+          className="text-[22px] font-extrabold tracking-[-0.03em]"
+          style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
+        >
+          My Modules
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>
+          All modules from your active course enrollments
+        </p>
       </div>
 
       {enrollments.length === 0 ? (
-        <p className="text-sm text-gray-500">Not enrolled in any course offerings.</p>
+        <EmptyState
+          title="No modules yet"
+          body="You're not enrolled in any active course offerings. Contact your administrator."
+        />
       ) : (
-        <div className="space-y-6">
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {enrollments.map((e) => (
             <section key={e.id}>
-              <h2 className="text-sm font-semibold text-gray-500 mb-2">{e.courseOffering.name}</h2>
-              <ul className="space-y-2">
-                {e.courseOffering.moduleOfferings.map((mo) => (
-                  <li key={mo.id}>
+              <div
+                className="text-[11px] uppercase tracking-[0.1em] font-bold mb-3"
+                style={{ color: "var(--ink-4)" }}
+              >
+                {e.courseOffering.name}
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                {e.courseOffering.moduleOfferings.map((mo, i) => {
+                  const tone = MODULE_TONES[i % MODULE_TONES.length];
+                  return (
                     <Link
+                      key={mo.id}
                       href={`/student/modules/${mo.id}`}
-                      className="block rounded border border-gray-200 bg-white px-5 py-3 hover:border-blue-300 hover:shadow-sm transition"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        padding: "16px 18px",
+                        borderRadius: 16,
+                        border: "1px solid var(--line)",
+                        background: "var(--surface)",
+                        textDecoration: "none",
+                        transition: "border-color 0.15s, box-shadow 0.15s",
+                      }}
+                      className="module-card-link"
                     >
-                      <p className="font-medium text-gray-900">{mo.templateModule.module.name}</p>
+                      <div
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          display: "grid",
+                          placeItems: "center",
+                          background: tone.bg,
+                          color: tone.fg,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <BookOpen size={20} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          className="font-semibold text-[14px] leading-tight"
+                          style={{ color: "var(--ink)" }}
+                        >
+                          {mo.templateModule.module.name}
+                        </div>
+                      </div>
+                      <ArrowRight size={15} style={{ color: "var(--ink-4)", flexShrink: 0 }} />
                     </Link>
-                  </li>
-                ))}
-              </ul>
+                  );
+                })}
+              </div>
             </section>
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

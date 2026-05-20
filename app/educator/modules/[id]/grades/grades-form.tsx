@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { enterComponentMarkAction, releaseComponentMarkAction, releaseFinalGradesAction } from "@/lib/actions/assessment-action";
+import { Chip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty";
 
 type ComponentMarkData = { id: string; studentId: string; studentName: string; score: number; status: string };
 type ComponentData = { id: string; title: string; maximumMark: number; componentMarks: ComponentMarkData[] };
@@ -16,29 +18,54 @@ type Props = {
   canReleaseFinalGrades: boolean;
 };
 
+const inputStyle: React.CSSProperties = {
+  borderRadius: 8,
+  border: "1px solid var(--line)",
+  background: "var(--surface)",
+  color: "var(--ink)",
+  fontSize: 13,
+  padding: "7px 10px",
+  outline: "none",
+  fontFamily: "inherit",
+};
+
 function MarkEntryRow({ comp, students, moduleOfferingId }: { comp: ComponentData; students: StudentData[]; moduleOfferingId: string }) {
   const [markState, markAction, markPending] = useActionState(enterComponentMarkAction, null);
   return (
-    <form action={markAction} className="px-5 py-3 flex gap-3 flex-wrap items-end border-b border-gray-100">
+    <form action={markAction} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", padding: "12px 18px", borderBottom: "1px solid var(--line-2)", background: "var(--surface-2)" }}>
       <input type="hidden" name="assessmentComponentId" value={comp.id} />
       <input type="hidden" name="moduleOfferingId" value={moduleOfferingId} />
-      {markState?.error && <p role="alert" className="w-full text-sm text-red-600">{markState.error}</p>}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium">Student</label>
-        <select name="studentId" required className="rounded border px-3 py-2 text-sm">
+      {markState?.error && <p role="alert" style={{ width: "100%", fontSize: 12.5, color: "var(--bad)" }}>{markState.error}</p>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: "var(--ink-3)" }}>Student</label>
+        <select name="studentId" required style={{ ...inputStyle, minWidth: 180 }}>
           <option value="">Select student</option>
           {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       </div>
-      <div className="space-y-1">
-        <label className="block text-xs font-medium">Score</label>
-        <input name="score" type="number" min="0" max={comp.maximumMark} step="0.5" required className="rounded border px-3 py-2 text-sm w-24" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: "var(--ink-3)" }}>Score (max {comp.maximumMark})</label>
+        <input name="score" type="number" min="0" max={comp.maximumMark} step="0.5" required style={{ ...inputStyle, width: 90 }} />
       </div>
-      <div className="space-y-1">
-        <label className="block text-xs font-medium">Feedback</label>
-        <input name="feedback" placeholder="Optional" className="rounded border px-3 py-2 text-sm w-48" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: "var(--ink-3)" }}>Feedback</label>
+        <input name="feedback" placeholder="Optional" style={{ ...inputStyle, width: 200 }} />
       </div>
-      <button type="submit" disabled={markPending} className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+      <button
+        type="submit"
+        disabled={markPending}
+        style={{
+          padding: "7px 16px",
+          borderRadius: 9,
+          background: "var(--primary-strong)",
+          color: "#fff",
+          fontSize: 13,
+          fontWeight: 700,
+          border: "none",
+          cursor: markPending ? "default" : "pointer",
+          opacity: markPending ? 0.6 : 1,
+        }}
+      >
         {markPending ? "Saving…" : "Enter Mark"}
       </button>
     </form>
@@ -48,10 +75,24 @@ function MarkEntryRow({ comp, students, moduleOfferingId }: { comp: ComponentDat
 function ReleaseMarkButton({ markId, moduleOfferingId }: { markId: string; moduleOfferingId: string }) {
   const [, relAction, relPending] = useActionState(releaseComponentMarkAction, null);
   return (
-    <form action={relAction} className="inline">
+    <form action={relAction} style={{ display: "inline" }}>
       <input type="hidden" name="componentMarkId" value={markId} />
       <input type="hidden" name="moduleOfferingId" value={moduleOfferingId} />
-      <button type="submit" disabled={relPending} className="rounded bg-green-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">
+      <button
+        type="submit"
+        disabled={relPending}
+        style={{
+          padding: "4px 10px",
+          borderRadius: 7,
+          background: "var(--ok-soft)",
+          color: "var(--ok)",
+          fontSize: 11.5,
+          fontWeight: 600,
+          border: "none",
+          cursor: relPending ? "default" : "pointer",
+          opacity: relPending ? 0.6 : 1,
+        }}
+      >
         {relPending ? "…" : "Release"}
       </button>
     </form>
@@ -63,8 +104,22 @@ function ReleaseFinalGradesButton({ moduleOfferingId }: { moduleOfferingId: stri
   return (
     <form action={fgAction}>
       <input type="hidden" name="moduleOfferingId" value={moduleOfferingId} />
-      {fgState?.error && <p className="text-xs text-red-600 mb-1">{fgState.error}</p>}
-      <button type="submit" disabled={fgPending} className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+      {fgState?.error && <p style={{ fontSize: 12, color: "var(--bad)", marginBottom: 4 }}>{fgState.error}</p>}
+      <button
+        type="submit"
+        disabled={fgPending}
+        style={{
+          padding: "7px 14px",
+          borderRadius: 9,
+          background: "var(--primary-strong)",
+          color: "#fff",
+          fontSize: 13,
+          fontWeight: 700,
+          border: "none",
+          cursor: fgPending ? "default" : "pointer",
+          opacity: fgPending ? 0.6 : 1,
+        }}
+      >
         {fgPending ? "Releasing…" : "Release All Final Grades"}
       </button>
     </form>
@@ -73,34 +128,33 @@ function ReleaseFinalGradesButton({ moduleOfferingId }: { moduleOfferingId: stri
 
 export function GradesForm({ moduleOfferingId, components, students, finalGrades, canReleaseFinalGrades }: Props) {
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {components.map((comp) => (
-        <section key={comp.id} className="rounded border border-gray-200 bg-white">
-          <div className="px-5 py-3 border-b border-gray-100">
-            <h3 className="font-medium">{comp.title} (max {comp.maximumMark})</h3>
+        <div key={comp.id} style={{ borderRadius: 14, border: "1px solid var(--line)", background: "var(--surface)", overflow: "hidden" }}>
+          <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--line-2)" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{comp.title}</span>
+            <span style={{ fontSize: 12.5, color: "var(--ink-3)", marginLeft: 8 }}>max {comp.maximumMark}</span>
           </div>
           <MarkEntryRow comp={comp} students={students} moduleOfferingId={moduleOfferingId} />
           {comp.componentMarks.length > 0 && (
-            <table className="w-full text-sm">
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
-                <tr className="border-b text-left bg-gray-50">
-                  <th className="px-5 py-2 font-medium">Student</th>
-                  <th className="py-2 pr-4 font-medium">Score</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-5 font-medium"></th>
+                <tr style={{ borderBottom: "1px solid var(--line-2)" }}>
+                  <th style={{ padding: "9px 18px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Student</th>
+                  <th style={{ padding: "9px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Score</th>
+                  <th style={{ padding: "9px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Status</th>
+                  <th style={{ padding: "9px 18px 9px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {comp.componentMarks.map((m) => (
-                  <tr key={m.id} className="border-b">
-                    <td className="px-5 py-2">{m.studentName}</td>
-                    <td className="py-2 pr-4">{m.score}</td>
-                    <td className="py-2 pr-4">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${m.status === "RELEASED" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-                        {m.status}
-                      </span>
+                  <tr key={m.id} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                    <td style={{ padding: "9px 18px", fontWeight: 500, color: "var(--ink)" }}>{m.studentName}</td>
+                    <td style={{ padding: "9px 8px", color: "var(--ink-2)" }}>{m.score}</td>
+                    <td style={{ padding: "9px 8px" }}>
+                      <Chip variant={m.status === "RELEASED" ? "ok" : "warn"} size="sm">{m.status}</Chip>
                     </td>
-                    <td className="py-2 pr-5">
+                    <td style={{ padding: "9px 18px 9px 8px" }}>
                       {m.status === "DRAFT" && <ReleaseMarkButton markId={m.id} moduleOfferingId={moduleOfferingId} />}
                     </td>
                   </tr>
@@ -108,46 +162,46 @@ export function GradesForm({ moduleOfferingId, components, students, finalGrades
               </tbody>
             </table>
           )}
-        </section>
+        </div>
       ))}
 
-      <section className="rounded border border-gray-200 bg-white">
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-medium">Final Grades</h3>
+      <div style={{ borderRadius: 14, border: "1px solid var(--line)", background: "var(--surface)", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 18px", borderBottom: "1px solid var(--line-2)", background: "var(--surface-2)" }}>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>Final Grades</span>
           {canReleaseFinalGrades && <ReleaseFinalGradesButton moduleOfferingId={moduleOfferingId} />}
         </div>
         {finalGrades.length === 0 ? (
-          <p className="px-5 py-3 text-sm text-gray-500">No final grades released yet.</p>
+          <div style={{ padding: 18 }}>
+            <EmptyState title="No final grades released" body="Release component marks first to calculate final grades." />
+          </div>
         ) : (
-          <table className="w-full text-sm">
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
-              <tr className="border-b text-left bg-gray-50">
-                <th className="px-5 py-2 font-medium">Student</th>
-                <th className="py-2 pr-4 font-medium">%</th>
-                <th className="py-2 pr-4 font-medium">Result</th>
-                <th className="py-2 pr-5 font-medium">Status</th>
+              <tr style={{ borderBottom: "1px solid var(--line-2)" }}>
+                <th style={{ padding: "9px 18px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Student</th>
+                <th style={{ padding: "9px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>%</th>
+                <th style={{ padding: "9px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Result</th>
+                <th style={{ padding: "9px 18px 9px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Status</th>
               </tr>
             </thead>
             <tbody>
               {finalGrades.map((g) => {
                 const student = students.find((s) => s.id === g.studentId);
                 return (
-                  <tr key={g.studentId} className="border-b">
-                    <td className="px-5 py-2">{student?.name ?? g.studentId}</td>
-                    <td className="py-2 pr-4">{g.percentage.toFixed(1)}</td>
-                    <td className="py-2 pr-4">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${g.isPassing ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                        {g.isPassing ? "Pass" : "Fail"}
-                      </span>
+                  <tr key={g.studentId} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                    <td style={{ padding: "9px 18px", fontWeight: 500, color: "var(--ink)" }}>{student?.name ?? g.studentId}</td>
+                    <td style={{ padding: "9px 8px", color: "var(--ink-2)" }}>{g.percentage.toFixed(1)}</td>
+                    <td style={{ padding: "9px 8px" }}>
+                      <Chip variant={g.isPassing ? "ok" : "bad"} size="sm">{g.isPassing ? "Pass" : "Fail"}</Chip>
                     </td>
-                    <td className="py-2 pr-5 text-xs text-gray-500">{g.status}</td>
+                    <td style={{ padding: "9px 18px 9px 8px", fontSize: 12, color: "var(--ink-3)" }}>{g.status}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         )}
-      </section>
+      </div>
     </div>
   );
 }

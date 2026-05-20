@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { markCourseInactiveAction } from "@/lib/actions/catalogue-action";
 import Link from "next/link";
+import { Chip } from "@/components/ui/chip";
 
 type Course = {
   id: string;
@@ -25,28 +26,27 @@ export function CourseRow({ course }: { course: Course }) {
   const [pending, startTransition] = useTransition();
 
   return (
-    <tr className="border-b">
-      <td className="py-2 pr-4 font-mono">{course.code}</td>
-      <td className="py-2 pr-4">{course.name}</td>
-      <td className="py-2 pr-4">{AWARD_LEVEL_LABEL[course.awardLevel] ?? course.awardLevel}</td>
-      <td className="py-2 pr-4">{course.faculty.name}</td>
-      <td className="py-2 pr-4">{course.status === "ACTIVE" ? "Active" : "Inactive"}</td>
-      <td className="py-2 space-x-2">
-        <Link
-          href={`/admin/catalogue/courses/${course.id}/edit`}
-          className="text-blue-600 underline text-sm"
-        >
-          Edit
-        </Link>
-        {course.status === "ACTIVE" && (
-          <button
-            onClick={() => startTransition(() => markCourseInactiveAction(course.id))}
-            disabled={pending}
-            className="rounded bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
-          >
-            Mark inactive
-          </button>
-        )}
+    <tr style={{ borderBottom: "1px solid var(--line-2)" }}>
+      <td style={{ padding: "10px 18px", fontFamily: "monospace", fontSize: 12, color: "var(--ink-3)" }}>{course.code}</td>
+      <td style={{ padding: "10px 8px", fontWeight: 600, color: "var(--ink)" }}>{course.name}</td>
+      <td style={{ padding: "10px 8px", color: "var(--ink-2)" }}>{AWARD_LEVEL_LABEL[course.awardLevel] ?? course.awardLevel}</td>
+      <td style={{ padding: "10px 8px", color: "var(--ink-2)" }}>{course.faculty.name}</td>
+      <td style={{ padding: "10px 8px" }}>
+        <Chip variant={course.status === "ACTIVE" ? "ok" : "default"} size="sm">{course.status === "ACTIVE" ? "Active" : "Inactive"}</Chip>
+      </td>
+      <td style={{ padding: "10px 18px 10px 8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Link href={`/admin/catalogue/courses/${course.id}/edit`} style={{ fontSize: 13, fontWeight: 600, color: "var(--primary-strong)", textDecoration: "none" }}>Edit</Link>
+          {course.status === "ACTIVE" && (
+            <button
+              onClick={() => startTransition(() => markCourseInactiveAction(course.id))}
+              disabled={pending}
+              style={{ padding: "4px 10px", borderRadius: 7, border: "1px solid var(--warn)", background: "var(--warn-soft)", color: "var(--warn)", fontSize: 12, fontWeight: 600, cursor: pending ? "default" : "pointer", opacity: pending ? 0.6 : 1 }}
+            >
+              Mark inactive
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );

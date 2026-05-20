@@ -19,7 +19,18 @@ export function NotificationActions({ notificationId, markAllRead }: Props) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded border px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-50 whitespace-nowrap"
+        style={{
+          padding: "4px 10px",
+          borderRadius: 8,
+          border: "1px solid var(--line)",
+          background: "var(--surface)",
+          color: "var(--ink-2)",
+          fontSize: 12,
+          fontWeight: 600,
+          cursor: "pointer",
+          opacity: pending ? 0.5 : 1,
+          whiteSpace: "nowrap",
+        }}
       >
         {pending ? "…" : markAllRead ? "Mark all read" : "Mark read"}
       </button>

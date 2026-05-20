@@ -2,34 +2,28 @@
 
 import { useActionState } from "react";
 import { createFacultyAction } from "@/lib/actions/catalogue-action";
+import { Plus } from "lucide-react";
 
 export function CreateFacultyForm() {
   const [state, action, pending] = useActionState(createFacultyAction, null);
 
   return (
-    <form action={action} className="flex gap-2 items-end">
-      {state?.error && (
-        <p role="alert" className="text-sm text-red-700">
-          {state.error}
-        </p>
-      )}
-      <div className="space-y-1">
-        <label htmlFor="faculty-name" className="block text-sm font-medium">
-          Name
-        </label>
-        <input
-          id="faculty-name"
-          name="name"
-          type="text"
-          required
-          className="rounded border px-3 py-2 text-sm"
-        />
-      </div>
+    <form action={action} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+      {state?.error && <p role="alert" style={{ fontSize: 12.5, color: "var(--bad)" }}>{state.error}</p>}
+      <input
+        id="faculty-name"
+        name="name"
+        type="text"
+        required
+        placeholder="Faculty name"
+        style={{ borderRadius: 9, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)", fontSize: 13.5, padding: "8px 12px", outline: "none", fontFamily: "inherit", minWidth: 200 }}
+      />
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 16px", borderRadius: 10, background: "var(--primary-strong)", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: pending ? "default" : "pointer", opacity: pending ? 0.6 : 1, boxShadow: "0 4px 12px -4px oklch(0.5 0.15 162 / 0.35)", flexShrink: 0 }}
       >
+        <Plus size={13} />
         {pending ? "Adding…" : "Add faculty"}
       </button>
     </form>

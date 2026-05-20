@@ -2,11 +2,12 @@ import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { GradesForm } from "./grades-form";
+import { Chip } from "@/components/ui/chip";
 
 export default async function EducatorGradesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-
   const { account } = await requireAuthPage({ roles: ["EDUCATOR"] });
 
   const mo = await prisma.moduleOffering.findUnique({
@@ -31,45 +32,51 @@ export default async function EducatorGradesPage({ params }: { params: Promise<{
   });
 
   const totalWeight = components.reduce((sum, c) => sum + c.weightPercent, 0);
+  const weightOk = Math.round(totalWeight) === 100;
 
   return (
-    <main className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Grades & Assessment — {mo.templateModule.module.name}</h1>
-        <Link href={`/educator/modules/${id}`} className="text-sm text-blue-600 underline">Back to module</Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Link href={`/educator/modules/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--ink-3)", textDecoration: "none", width: "fit-content" }} className="module-back-link">
+        <ChevronLeft size={15} />
+        {mo.templateModule.module.name}
+      </Link>
+
+      <div>
+        <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+          Grades &amp; Assessment
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>{mo.templateModule.module.name}</p>
       </div>
 
-      {/* Assessment components summary */}
-      <section className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-semibold">Assessment Structure</h2>
-          <span className={`text-sm font-medium ${Math.round(totalWeight) === 100 ? "text-green-600" : "text-yellow-600"}`}>
-            Total weight: {totalWeight}%
-          </span>
-        </div>
-        <table className="w-full text-sm border-collapse mb-3">
-          <thead>
-            <tr className="border-b text-left">
-              <th className="py-2 pr-4 font-medium">Component</th>
-              <th className="py-2 pr-4 font-medium">Type</th>
-              <th className="py-2 pr-4 font-medium">Weight</th>
-              <th className="py-2 font-medium">Max Mark</th>
-            </tr>
-          </thead>
-          <tbody>
-            {components.map((c) => (
-              <tr key={c.id} className="border-b">
-                <td className="py-2 pr-4">{c.title}</td>
-                <td className="py-2 pr-4 text-xs text-gray-500">{c.type.replace("_", " ")}</td>
-                <td className="py-2 pr-4">{c.weightPercent}%</td>
-                <td className="py-2">{c.maximumMark}</td>
+      {components.length > 0 && (
+        <div style={{ borderRadius: 14, border: "1px solid var(--line)", background: "var(--surface)", overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line-2)", background: "var(--surface-2)" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>Assessment Structure</span>
+            <Chip variant={weightOk ? "ok" : "warn"} size="sm">Total weight: {totalWeight}%</Chip>
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--line-2)" }}>
+                <th style={{ padding: "10px 18px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Component</th>
+                <th style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Type</th>
+                <th style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Weight</th>
+                <th style={{ padding: "10px 18px 10px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Max Mark</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {components.map((c) => (
+                <tr key={c.id} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                  <td style={{ padding: "10px 18px", fontWeight: 600, color: "var(--ink)" }}>{c.title}</td>
+                  <td style={{ padding: "10px 8px", color: "var(--ink-3)", fontSize: 12 }}>{c.type.replace("_", " ")}</td>
+                  <td style={{ padding: "10px 8px", color: "var(--ink-2)" }}>{c.weightPercent}%</td>
+                  <td style={{ padding: "10px 18px 10px 8px", color: "var(--ink-2)" }}>{c.maximumMark}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {/* Mark entry and release */}
       <GradesForm
         moduleOfferingId={id}
         components={components.map((c) => ({
@@ -86,8 +93,8 @@ export default async function EducatorGradesPage({ params }: { params: Promise<{
         }))}
         students={enrollments.map((e) => ({ id: e.studentId, name: e.student.user.name }))}
         finalGrades={finalGrades.map((g) => ({ studentId: g.studentId, percentage: g.percentage, isPassing: g.isPassing, status: g.status }))}
-        canReleaseFinalGrades={Math.round(totalWeight) === 100}
+        canReleaseFinalGrades={weightOk}
       />
-    </main>
+    </div>
   );
 }

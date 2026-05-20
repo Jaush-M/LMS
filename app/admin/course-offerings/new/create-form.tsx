@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { createCourseOfferingAction } from "@/lib/actions/course-offering-action";
+import { Banner } from "@/components/ui/banner";
 
 type Course = {
   id: string;
@@ -28,6 +29,24 @@ type Props = {
   studyModes: StudyMode[];
 };
 
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  borderRadius: 9,
+  border: "1px solid var(--line)",
+  background: "var(--surface)",
+  color: "var(--ink)",
+  fontSize: 13.5,
+  padding: "9px 12px",
+  outline: "none",
+  fontFamily: "inherit",
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: "var(--ink-2)",
+};
+
 export function CreateCourseOfferingForm({ courses, educators, intakes, studyModes }: Props) {
   const [state, action, pending] = useActionState(createCourseOfferingAction, null);
   const [selectedCourseId, setSelectedCourseId] = useState("");
@@ -36,156 +55,110 @@ export function CreateCourseOfferingForm({ courses, educators, intakes, studyMod
   const template = selectedCourse?.curriculumTemplate ?? null;
 
   return (
-    <form action={action} className="space-y-6 max-w-2xl">
-      {state?.error && (
-        <p role="alert" className="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
-          {state.error}
-        </p>
-      )}
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 640 }}>
+      {state?.error && <Banner variant="bad">{state.error}</Banner>}
 
-      <div className="space-y-1">
-        <label htmlFor="name" className="block text-sm font-medium">
-          Name
-        </label>
-        <input id="name" name="name" type="text" required className="w-full rounded border px-3 py-2 text-sm" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <label htmlFor="name" style={labelStyle}>Name</label>
+        <input id="name" name="name" type="text" required style={inputStyle} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label htmlFor="courseId" className="block text-sm font-medium">
-            Course
-          </label>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <label htmlFor="courseId" style={labelStyle}>Course</label>
           <select
             id="courseId"
             name="courseId"
             required
-            className="w-full rounded border px-3 py-2 text-sm"
+            style={inputStyle}
             value={selectedCourseId}
             onChange={(e) => setSelectedCourseId(e.target.value)}
           >
             <option value="">Select course</option>
             {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.code} — {c.name}
-              </option>
+              <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
             ))}
           </select>
         </div>
-
-        {template && (
-          <input type="hidden" name="curriculumTemplateId" value={template.id} />
-        )}
-
-        <div className="space-y-1">
-          <label htmlFor="intakeId" className="block text-sm font-medium">
-            Intake
-          </label>
-          <select id="intakeId" name="intakeId" required className="w-full rounded border px-3 py-2 text-sm">
+        {template && <input type="hidden" name="curriculumTemplateId" value={template.id} />}
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <label htmlFor="intakeId" style={labelStyle}>Intake</label>
+          <select id="intakeId" name="intakeId" required style={inputStyle}>
             <option value="">Select intake</option>
-            {intakes.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name}
-              </option>
-            ))}
+            {intakes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </select>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label htmlFor="studyModeId" className="block text-sm font-medium">
-            Study mode
-          </label>
-          <select id="studyModeId" name="studyModeId" required className="w-full rounded border px-3 py-2 text-sm">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <label htmlFor="studyModeId" style={labelStyle}>Study mode</label>
+          <select id="studyModeId" name="studyModeId" required style={inputStyle}>
             <option value="">Select study mode</option>
-            {studyModes.map((sm) => (
-              <option key={sm.id} value={sm.id}>
-                {sm.name}
-              </option>
-            ))}
+            {studyModes.map((sm) => <option key={sm.id} value={sm.id}>{sm.name}</option>)}
           </select>
         </div>
-
-        <div className="space-y-1">
-          <label htmlFor="capacity" className="block text-sm font-medium">
-            Capacity
-          </label>
-          <input
-            id="capacity"
-            name="capacity"
-            type="number"
-            min={1}
-            defaultValue={24}
-            required
-            className="w-full rounded border px-3 py-2 text-sm"
-          />
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <label htmlFor="capacity" style={labelStyle}>Capacity</label>
+          <input id="capacity" name="capacity" type="number" min={1} defaultValue={24} required style={inputStyle} />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label htmlFor="startAt" className="block text-sm font-medium">
-            Start date
-          </label>
-          <input id="startAt" name="startAt" type="date" required className="w-full rounded border px-3 py-2 text-sm" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <label htmlFor="startAt" style={labelStyle}>Start date</label>
+          <input id="startAt" name="startAt" type="date" required style={inputStyle} />
         </div>
-        <div className="space-y-1">
-          <label htmlFor="finishAt" className="block text-sm font-medium">
-            Finish date
-          </label>
-          <input id="finishAt" name="finishAt" type="date" required className="w-full rounded border px-3 py-2 text-sm" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <label htmlFor="finishAt" style={labelStyle}>Finish date</label>
+          <input id="finishAt" name="finishAt" type="date" required style={inputStyle} />
         </div>
       </div>
 
       {template && template.templateModules.length > 0 && (
-        <fieldset className="rounded border p-4 space-y-3">
-          <legend className="px-1 text-sm font-medium">Module Offering Educator Assignments</legend>
+        <div style={{ borderRadius: 12, border: "1px solid var(--line)", background: "var(--surface-2)", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>Module Educator Assignments</p>
           {template.templateModules
             .slice()
             .sort((a, b) => a.sortOrder - b.sortOrder)
             .map((tm) => (
-              <div key={tm.id} className="grid grid-cols-2 gap-4 items-center">
+              <div key={tm.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "center" }}>
                 <input type="hidden" name="templateModuleId" value={tm.id} />
-                <span className="text-sm">{tm.module.name}</span>
-                <div className="space-y-1">
-                  <label htmlFor={`educator-${tm.id}`} className="sr-only">
-                    Educator for {tm.module.name}
-                  </label>
-                  <select
-                    id={`educator-${tm.id}`}
-                    name="primaryEducatorId"
-                    required
-                    aria-label={`Educator for ${tm.module.name}`}
-                    className="w-full rounded border px-3 py-2 text-sm"
-                  >
-                    <option value="">Select educator</option>
-                    {educators.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.name} ({e.generatedIdentifier})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <span style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>{tm.module.name}</span>
+                <select
+                  id={`educator-${tm.id}`}
+                  name="primaryEducatorId"
+                  required
+                  aria-label={`Educator for ${tm.module.name}`}
+                  style={inputStyle}
+                >
+                  <option value="">Select educator</option>
+                  {educators.map((e) => (
+                    <option key={e.id} value={e.id}>{e.name} ({e.generatedIdentifier})</option>
+                  ))}
+                </select>
               </div>
             ))}
-        </fieldset>
+        </div>
       )}
 
       {!selectedCourseId && (
-        <p className="text-sm text-gray-500">Select a course to see module assignments.</p>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", fontStyle: "italic" }}>Select a course to see module assignments.</p>
       )}
 
       {selectedCourse && !template && (
-        <p className="text-sm text-red-600">This course has no Curriculum Template. Please create one first.</p>
+        <Banner variant="bad">This course has no Curriculum Template. Please create one first.</Banner>
       )}
 
-      <button
-        type="submit"
-        disabled={pending || !template}
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-      >
-        {pending ? "Creating…" : "Create Course Offering"}
-      </button>
+      <div>
+        <button
+          type="submit"
+          disabled={pending || !template}
+          style={{ padding: "9px 22px", borderRadius: 10, background: "var(--primary-strong)", color: "#fff", fontSize: 13.5, fontWeight: 700, border: "none", cursor: (pending || !template) ? "default" : "pointer", opacity: (pending || !template) ? 0.5 : 1, boxShadow: "0 4px 12px -4px oklch(0.5 0.15 162 / 0.35)" }}
+        >
+          {pending ? "Creating…" : "Create Course Offering"}
+        </button>
+      </div>
     </form>
   );
 }

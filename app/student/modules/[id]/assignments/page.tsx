@@ -2,11 +2,21 @@ import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { listAssignments } from "@/lib/assignments";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty";
+
+function submissionChip(status: string) {
+  if (status === "MARKED") return <Chip variant="ok" dot>Marked</Chip>;
+  if (status === "LATE") return <Chip variant="bad" dot>Late</Chip>;
+  if (status === "SUBMITTED") return <Chip variant="lav" dot>Submitted</Chip>;
+  return <Chip variant="default" dot>Pending review</Chip>;
+}
 
 export default async function StudentAssignmentsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-
   const { account } = await requireAuthPage({ roles: ["STUDENT"] });
 
   const mo = await prisma.moduleOffering.findUnique({
@@ -37,78 +47,97 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
   });
 
   return (
-    <main className="p-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Assignments — {mo.templateModule.module.name}</h1>
-        <Link href={`/student/modules/${id}`} className="text-sm text-blue-600 underline">Back to module</Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Link href={`/student/modules/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--ink-3)", textDecoration: "none", width: "fit-content" }} className="module-back-link">
+        <ChevronLeft size={15} />
+        {mo.templateModule.module.name}
+      </Link>
+
+      <div>
+        <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+          Assignments
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>{mo.templateModule.module.name}</p>
       </div>
 
-      {/* Assignments list */}
       {assignments.length === 0 ? (
-        <p className="text-sm text-gray-500">No assignments published yet.</p>
+        <EmptyState title="No assignments yet" body="Your educator hasn't published any assignments." />
       ) : (
-        <ul className="space-y-3 mb-8">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {assignments.map((a) => {
             const sub = submissionMap.get(a.id);
+            const now = new Date();
+            const isOverdue = !sub && a.deadline < now;
             return (
-              <li key={a.id} className="rounded border border-gray-200 bg-white px-5 py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-gray-800">{a.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Due {a.deadline.toLocaleDateString()} · Max {a.maximumMark} marks</p>
-                    <div className="mt-2 text-sm text-gray-600 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: a.body }} />
-                  </div>
-                  <div className="shrink-0 text-right">
-                    {sub ? (
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${sub.status === "MARKED" ? "bg-green-100 text-green-700" : sub.status === "LATE" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
-                        {sub.status}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-400">Not submitted</span>
+              <Card key={a.id}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)" }}>{a.title}</div>
+                    <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 3 }}>
+                      Due {a.deadline.toLocaleDateString("en", { weekday: "short", day: "numeric", month: "short" })} · Max {a.maximumMark} marks
+                    </div>
+                    {a.body && (
+                      <div
+                        className="prose prose-sm max-w-none mt-3"
+                        style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6 }}
+                        dangerouslySetInnerHTML={{ __html: a.body }}
+                      />
                     )}
                   </div>
+                  <div style={{ flexShrink: 0 }}>
+                    {sub
+                      ? submissionChip(sub.status)
+                      : isOverdue
+                        ? <Chip variant="bad" dot>Overdue</Chip>
+                        : <Chip variant="info">Not submitted</Chip>
+                    }
+                  </div>
                 </div>
-              </li>
+              </Card>
             );
           })}
-        </ul>
+        </div>
       )}
 
-      {/* Released marks */}
       {myMarks.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">My Marks</h2>
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium">Component</th>
-                <th className="py-2 pr-4 font-medium">Score</th>
-                <th className="py-2 font-medium">Weight</th>
-              </tr>
-            </thead>
-            <tbody>
-              {myMarks.map((m) => (
-                <tr key={m.id} className="border-b">
-                  <td className="py-2 pr-4">{m.assessmentComponent.title}</td>
-                  <td className="py-2 pr-4">{m.score} / {m.assessmentComponent.maximumMark}</td>
-                  <td className="py-2">{m.assessmentComponent.weightPercent}%</td>
+        <Card flush>
+          <div style={{ padding: "14px 20px 8px", fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>My Marks</div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                  {["Component", "Score", "Weight"].map((h) => (
+                    <th key={h} style={{ padding: "9px 20px", textAlign: "left", fontWeight: 700, fontSize: 11, color: "var(--ink-4)", letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+              </thead>
+              <tbody>
+                {myMarks.map((m) => (
+                  <tr key={m.id} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                    <td style={{ padding: "10px 20px", color: "var(--ink)" }}>{m.assessmentComponent.title}</td>
+                    <td style={{ padding: "10px 20px", fontWeight: 700, color: "var(--ink)" }}>{m.score} / {m.assessmentComponent.maximumMark}</td>
+                    <td style={{ padding: "10px 20px", color: "var(--ink-3)" }}>{m.assessmentComponent.weightPercent}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
-      {/* Final grade */}
       {myFinalGrade && (
-        <section className="rounded border border-gray-200 bg-white px-5 py-4">
-          <h2 className="font-semibold mb-1">Final Grade</h2>
-          <p className="text-2xl font-bold {myFinalGrade.isPassing ? 'text-green-600' : 'text-red-600'}">
-            {myFinalGrade.percentage.toFixed(1)}%
-          </p>
-          <p className="text-sm text-gray-500">{myFinalGrade.isPassing ? "Pass" : "Fail"}</p>
-        </section>
+        <Card>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 8 }}>Final Grade</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 32, fontWeight: 800, fontFamily: "var(--font-display)", color: myFinalGrade.isPassing ? "var(--ok)" : "var(--bad)" }}>
+              {myFinalGrade.percentage.toFixed(1)}%
+            </span>
+            <Chip variant={myFinalGrade.isPassing ? "ok" : "bad"} dot>
+              {myFinalGrade.isPassing ? "Pass" : "Fail"}
+            </Chip>
+          </div>
+        </Card>
       )}
-    </main>
+    </div>
   );
 }
