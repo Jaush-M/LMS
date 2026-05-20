@@ -1,8 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
+import { requireAuthAction } from "@/lib/auth-guard";
 import { createAccount } from "@/lib/accounts";
 
 export type CreateAccountState = {
@@ -18,14 +16,9 @@ export async function createAdministratorAction(
   _prev: CreateAccountState,
   formData: FormData
 ): Promise<CreateAccountState> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { error: "Unauthorized" };
-
-  const userAccount = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { role: true },
-  });
-  if (!userAccount || userAccount.role !== "SUPER_ADMINISTRATOR") {
+  try {
+    await requireAuthAction({ roles: ["SUPER_ADMINISTRATOR"] });
+  } catch {
     return { error: "Unauthorized" };
   }
 
@@ -42,14 +35,9 @@ export async function createStudentOrEducatorAction(
   _prev: CreateAccountState,
   formData: FormData
 ): Promise<CreateAccountState> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { error: "Unauthorized" };
-
-  const userAccount = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { role: true },
-  });
-  if (!userAccount || userAccount.role !== "ADMINISTRATOR") {
+  try {
+    await requireAuthAction({ minRole: "ADMINISTRATOR" });
+  } catch {
     return { error: "Unauthorized" };
   }
 

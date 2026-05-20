@@ -1,26 +1,10 @@
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { requireAuthPage } from "@/lib/auth-guard";
 import Link from "next/link";
 import { getAdministratorDashboard } from "@/lib/administrator-dashboard";
 
 export default async function AdminDashboardPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const userAccount = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { role: true, mustChangePassword: true },
-  });
-
-  if (!userAccount || (userAccount.role !== "ADMINISTRATOR" && userAccount.role !== "SUPER_ADMINISTRATOR")) {
-    redirect("/dashboard");
-  }
-
-  if (userAccount.mustChangePassword) redirect("/change-password");
-
-  const isSuperAdmin = userAccount.role === "SUPER_ADMINISTRATOR";
+  const { user, account } = await requireAuthPage({ minRole: "ADMINISTRATOR" });
+  const isSuperAdmin = account.role === "SUPER_ADMINISTRATOR";
   const data = await getAdministratorDashboard();
 
   return (
@@ -29,7 +13,7 @@ export default async function AdminDashboardPage() {
         <h1 className="text-2xl font-semibold text-gray-900">
           {isSuperAdmin ? "Super Administrator Dashboard" : "Administrator Dashboard"}
         </h1>
-        <p className="mt-1 text-sm text-gray-500">Welcome, {session.user.name}</p>
+        <p className="mt-1 text-sm text-gray-500">Welcome, {user.name}</p>
 
         <nav className="mt-3 flex flex-wrap gap-4 text-sm text-blue-600">
           <Link href="/admin/create-account" className="underline">Create account</Link>

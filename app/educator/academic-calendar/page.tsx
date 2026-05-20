@@ -1,7 +1,5 @@
-import { auth } from "@/lib/auth";
+import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCalendarFeed } from "@/lib/academic-calendar";
 import { CreateModuleOfferingEventForm } from "./create-module-offering-event-form";
@@ -22,23 +20,15 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export default async function EducatorAcademicCalendarPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true, mustChangePassword: true },
-  });
-  if (!actor || actor.role !== "EDUCATOR") redirect("/dashboard");
-  if (actor.mustChangePassword) redirect("/change-password");
+  const { account } = await requireAuthPage({ roles: ["EDUCATOR"] });
 
   const moduleOfferings = await prisma.moduleOffering.findMany({
-    where: { primaryEducatorId: actor.id, courseOffering: { status: { not: "ARCHIVED" } } },
+    where: { primaryEducatorId: account.id, courseOffering: { status: { not: "ARCHIVED" } } },
     select: { id: true, templateModule: { select: { module: { select: { name: true } } } }, courseOffering: { select: { name: true } } },
     orderBy: { courseOffering: { name: "asc" } },
   });
 
-  const feed = await getCalendarFeed(actor.id);
+  const feed = await getCalendarFeed(account.id);
 
   const moduleOfferingOptions = moduleOfferings.map((mo) => ({
     id: mo.id,

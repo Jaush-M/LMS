@@ -1,22 +1,12 @@
-import { auth } from "@/lib/auth";
+import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 
 export default async function StudentModulesPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true, mustChangePassword: true },
-  });
-  if (!actor || actor.role !== "STUDENT") redirect("/dashboard");
-  if (actor.mustChangePassword) redirect("/change-password");
+  const { account } = await requireAuthPage({ roles: ["STUDENT"] });
 
   const enrollments = await prisma.enrollment.findMany({
-    where: { studentId: actor.id, status: "ACTIVE" },
+    where: { studentId: account.id, status: "ACTIVE" },
     include: {
       courseOffering: {
         include: {

@@ -1,7 +1,5 @@
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getAuthContext } from "@/lib/auth-guard";
 
 const roleRoutes = {
   SUPER_ADMINISTRATOR: "/admin/dashboard",
@@ -11,24 +9,10 @@ const roleRoutes = {
 } as const;
 
 export default async function DashboardPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const ctx = await getAuthContext();
 
-  if (!session) {
-    redirect("/sign-in");
-  }
+  if (!ctx) redirect("/sign-in");
+  if (ctx.account.mustChangePassword) redirect("/change-password");
 
-  const userAccount = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { role: true, mustChangePassword: true },
-  });
-
-  if (!userAccount) {
-    redirect("/sign-in");
-  }
-
-  if (userAccount.mustChangePassword) {
-    redirect("/change-password");
-  }
-
-  redirect(roleRoutes[userAccount.role]);
+  redirect(roleRoutes[ctx.account.role]);
 }

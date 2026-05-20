@@ -1,22 +1,13 @@
-import { auth } from "@/lib/auth";
+import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { listAssignments } from "@/lib/assignments";
 
 export default async function StudentAssignmentsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true, mustChangePassword: true },
-  });
-  if (!actor || actor.role !== "STUDENT") redirect("/dashboard");
-  if (actor.mustChangePassword) redirect("/change-password");
+  const { account } = await requireAuthPage({ roles: ["STUDENT"] });
 
   const mo = await prisma.moduleOffering.findUnique({
     where: { id },
@@ -26,23 +17,23 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
 
   let assignments;
   try {
-    assignments = await listAssignments({ moduleOfferingId: id, viewerId: actor.id });
+    assignments = await listAssignments({ moduleOfferingId: id, viewerId: account.id });
   } catch {
     notFound();
   }
 
   const mySubmissions = await prisma.assignmentSubmission.findMany({
-    where: { studentId: actor.id, assignmentId: { in: assignments.map((a) => a.id) } },
+    where: { studentId: account.id, assignmentId: { in: assignments.map((a) => a.id) } },
   });
   const submissionMap = new Map(mySubmissions.map((s) => [s.assignmentId, s]));
 
   const myMarks = await prisma.componentMark.findMany({
-    where: { studentId: actor.id, status: "RELEASED", assessmentComponent: { moduleOfferingId: id } },
+    where: { studentId: account.id, status: "RELEASED", assessmentComponent: { moduleOfferingId: id } },
     include: { assessmentComponent: { select: { title: true, weightPercent: true, maximumMark: true } } },
   });
 
   const myFinalGrade = await prisma.finalGrade.findUnique({
-    where: { moduleOfferingId_studentId: { moduleOfferingId: id, studentId: actor.id } },
+    where: { moduleOfferingId_studentId: { moduleOfferingId: id, studentId: account.id } },
   });
 
   return (

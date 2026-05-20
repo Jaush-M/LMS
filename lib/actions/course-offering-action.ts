@@ -1,23 +1,9 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireAuthRedirect } from "@/lib/auth-guard";
 import { createCourseOfferingFromTemplate, archiveCourseOffering } from "@/lib/course-offering";
 import { enrollStudent } from "@/lib/enrollment";
-
-async function requireAdministrator() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true },
-  });
-  if (!actor || actor.role !== "ADMINISTRATOR") redirect("/dashboard");
-  return actor;
-}
 
 // ── createCourseOfferingAction ────────────────────────────────────────────────
 
@@ -27,9 +13,9 @@ export async function createCourseOfferingAction(
   _prev: CreateCourseOfferingState,
   formData: FormData
 ): Promise<CreateCourseOfferingState> {
-  try {
-    await requireAdministrator();
+  await requireAuthRedirect({ minRole: "ADMINISTRATOR" });
 
+  try {
     const curriculumTemplateId = formData.get("curriculumTemplateId") as string;
     const intakeId = formData.get("intakeId") as string;
     const studyModeId = formData.get("studyModeId") as string;
@@ -38,7 +24,6 @@ export async function createCourseOfferingAction(
     const finishAt = new Date(formData.get("finishAt") as string);
     const capacity = Number(formData.get("capacity") ?? 24);
 
-    // collect per-template-module educator assignments
     const templateModuleIds = formData.getAll("templateModuleId") as string[];
     const primaryEducatorIds = formData.getAll("primaryEducatorId") as string[];
 
@@ -81,9 +66,9 @@ export async function enrollStudentAction(
   _prev: EnrollStudentState,
   formData: FormData
 ): Promise<EnrollStudentState> {
-  try {
-    const actor = await requireAdministrator();
+  const { account } = await requireAuthRedirect({ minRole: "ADMINISTRATOR" });
 
+  try {
     const studentId = formData.get("studentId") as string;
     const courseOfferingId = formData.get("courseOfferingId") as string;
     const overrideReason = (formData.get("overrideReason") as string | null)?.trim() || null;
@@ -91,7 +76,7 @@ export async function enrollStudentAction(
     const result = await enrollStudent({
       studentId,
       courseOfferingId,
-      enrolledById: actor.id,
+      enrolledById: account.id,
       isMainEnrollment: true,
       capacityOverride: overrideReason ? { reason: overrideReason } : undefined,
     });
@@ -115,11 +100,12 @@ export async function archiveCourseOfferingAction(
   _prev: ArchiveCourseOfferingState,
   formData: FormData
 ): Promise<ArchiveCourseOfferingState> {
+  const { account } = await requireAuthRedirect({ minRole: "ADMINISTRATOR" });
+
   try {
-    const actor = await requireAdministrator();
     const courseOfferingId = formData.get("courseOfferingId") as string;
 
-    await archiveCourseOffering({ courseOfferingId, archivedById: actor.id });
+    await archiveCourseOffering({ courseOfferingId, archivedById: account.id });
 
     redirect(`/admin/course-offerings/${courseOfferingId}`);
   } catch (error) {

@@ -1,7 +1,5 @@
-import { auth } from "@/lib/auth";
+import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCalendarFeed } from "@/lib/academic-calendar";
 import { CreateInstitutionEventForm } from "./create-institution-event-form";
@@ -23,18 +21,10 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export default async function AdministratorAcademicCalendarPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true, mustChangePassword: true },
-  });
-  if (!actor || actor.role !== "ADMINISTRATOR" && actor.role !== "SUPER_ADMINISTRATOR") redirect("/dashboard");
-  if (actor.mustChangePassword) redirect("/change-password");
+  const { account } = await requireAuthPage({ minRole: "ADMINISTRATOR" });
 
   const [feed, courseOfferings] = await Promise.all([
-    getCalendarFeed(actor.id),
+    getCalendarFeed(account.id),
     prisma.courseOffering.findMany({
       where: { status: { not: "ARCHIVED" } },
       select: { id: true, name: true },

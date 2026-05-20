@@ -1,22 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { requireAuthRedirect } from "@/lib/auth-guard";
 import { openFeedbackPeriod, submitFeedbackResponse } from "@/lib/module-feedback";
 
-async function getAccount() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-  const account = await prisma.userAccount.findUnique({ where: { userId: session.user.id } });
-  if (!account) redirect("/sign-in");
-  if (account.mustChangePassword) redirect("/change-password");
-  return account;
-}
-
 export async function openFeedbackPeriodAction(_prev: unknown, formData: FormData) {
-  const account = await getAccount();
+  const { account } = await requireAuthRedirect({ minRole: "ADMINISTRATOR" });
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
   const courseOfferingId = formData.get("courseOfferingId") as string;
   const openAtRaw = formData.get("openAt") as string;
@@ -34,7 +23,7 @@ export async function openFeedbackPeriodAction(_prev: unknown, formData: FormDat
 }
 
 export async function submitFeedbackResponseAction(_prev: unknown, formData: FormData) {
-  const account = await getAccount();
+  const { account } = await requireAuthRedirect({ roles: ["STUDENT"] });
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
   const ratingRaw = formData.get("rating") as string;
   const comment = (formData.get("comment") as string)?.trim() || undefined;
