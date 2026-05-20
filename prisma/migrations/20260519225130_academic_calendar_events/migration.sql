@@ -43,13 +43,7 @@ CREATE TABLE "ModuleOfferingEvent" (
 ALTER TABLE "InstitutionEvent" ADD CONSTRAINT "InstitutionEvent_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "UserAccount"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CourseOfferingEvent" ADD CONSTRAINT "CourseOfferingEvent_courseOfferingId_fkey" FOREIGN KEY ("courseOfferingId") REFERENCES "CourseOffering"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "CourseOfferingEvent" ADD CONSTRAINT "CourseOfferingEvent_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "UserAccount"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ModuleOfferingEvent" ADD CONSTRAINT "ModuleOfferingEvent_moduleOfferingId_fkey" FOREIGN KEY ("moduleOfferingId") REFERENCES "ModuleOffering"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ModuleOfferingEvent" ADD CONSTRAINT "ModuleOfferingEvent_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "UserAccount"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

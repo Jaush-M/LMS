@@ -8,7 +8,7 @@ const adapter = new PrismaPg({
 });
 const prisma = new PrismaClient({ adapter });
 
-const TEMP_PASSWORD = "TempPass123!";
+const TEMP_PASSWORD = "Password@123";
 
 async function createAuthUser(params: {
   id: string;

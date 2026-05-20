@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 // Seed credentials — must match prisma/seed.ts
-const TEMP_PASSWORD = "TempPass123!";
+const TEMP_PASSWORD = "Password@123";
 
 const ROLES = [
   {
