@@ -1,9 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAuthRedirect } from "@/lib/auth-guard";
 import {
   createAssessmentComponent,
   releaseComponentMark,
@@ -11,17 +10,8 @@ import {
   releaseFinalGrades,
 } from "@/lib/assessment";
 
-async function getEducatorAccount() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-  const account = await prisma.userAccount.findUnique({ where: { userId: session.user.id } });
-  if (!account || account.role !== "EDUCATOR") redirect("/dashboard");
-  if (account.mustChangePassword) redirect("/change-password");
-  return account;
-}
-
 export async function createAssessmentComponentAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
   const title = (formData.get("title") as string)?.trim();
   const type = formData.get("type") as "ONLINE_ASSIGNMENT" | "OFFLINE_ASSESSMENT";
@@ -45,7 +35,7 @@ export async function createAssessmentComponentAction(_prev: unknown, formData: 
 }
 
 export async function enterComponentMarkAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const assessmentComponentId = formData.get("assessmentComponentId") as string;
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
   const studentId = formData.get("studentId") as string;
@@ -64,7 +54,7 @@ export async function enterComponentMarkAction(_prev: unknown, formData: FormDat
 }
 
 export async function releaseComponentMarkAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const componentMarkId = formData.get("componentMarkId") as string;
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
 
@@ -78,7 +68,7 @@ export async function releaseComponentMarkAction(_prev: unknown, formData: FormD
 }
 
 export async function releaseFinalGradesAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
 
   try {

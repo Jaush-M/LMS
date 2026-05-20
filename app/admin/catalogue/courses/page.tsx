@@ -1,22 +1,12 @@
-import { auth } from "@/lib/auth";
+import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { listCourses, listFaculties } from "@/lib/catalogue";
 import { CourseRow } from "./course-row";
 import { CreateCourseForm } from "./create-course-form";
 import Link from "next/link";
 
 export default async function CoursesPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { role: true, mustChangePassword: true },
-  });
-  if (!actor || actor.role !== "ADMINISTRATOR" && actor.role !== "SUPER_ADMINISTRATOR") redirect("/dashboard");
-  if (actor.mustChangePassword) redirect("/change-password");
+  await requireAuthPage({ minRole: "ADMINISTRATOR" });
 
   const [courses, faculties] = await Promise.all([
     prisma.course.findMany({

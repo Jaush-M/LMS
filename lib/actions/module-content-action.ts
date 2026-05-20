@@ -1,9 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAuthRedirect } from "@/lib/auth-guard";
 import {
   createContentSection,
   createModuleContent,
@@ -12,17 +11,8 @@ import {
   deleteModuleContent,
 } from "@/lib/module-content";
 
-async function getEducatorAccount() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-  const account = await prisma.userAccount.findUnique({ where: { userId: session.user.id } });
-  if (!account || account.role !== "EDUCATOR") redirect("/dashboard");
-  if (account.mustChangePassword) redirect("/change-password");
-  return account;
-}
-
 export async function createContentSectionAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
   const title = (formData.get("title") as string)?.trim();
   if (!title) return { error: "Title is required" };
@@ -40,7 +30,7 @@ export async function createContentSectionAction(_prev: unknown, formData: FormD
 }
 
 export async function createModuleContentAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const contentSectionId = formData.get("contentSectionId") as string;
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
   const title = (formData.get("title") as string)?.trim();
@@ -60,7 +50,7 @@ export async function createModuleContentAction(_prev: unknown, formData: FormDa
 }
 
 export async function publishModuleContentAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const id = formData.get("id") as string;
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
 
@@ -74,7 +64,7 @@ export async function publishModuleContentAction(_prev: unknown, formData: FormD
 }
 
 export async function unpublishModuleContentAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const id = formData.get("id") as string;
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
 
@@ -88,7 +78,7 @@ export async function unpublishModuleContentAction(_prev: unknown, formData: For
 }
 
 export async function deleteModuleContentAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const id = formData.get("id") as string;
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
 

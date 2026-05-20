@@ -1,9 +1,7 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { requireAuthAction } from "@/lib/auth-guard";
 import { updateSystemSettings } from "@/lib/system-settings";
 
 export type SystemSettingsState = { error?: string; success?: boolean } | null;
@@ -12,14 +10,7 @@ export async function updateSystemSettingsAction(
   _prev: SystemSettingsState,
   formData: FormData
 ): Promise<SystemSettingsState> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { error: "Unauthorized" };
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true },
-  });
-  if (!actor || actor.role !== "SUPER_ADMINISTRATOR") return { error: "Unauthorized" };
+  const { account } = await requireAuthAction({ roles: ["SUPER_ADMINISTRATOR"] });
 
   const updates = {
     defaultReminderPeriodDays: parseInt(formData.get("defaultReminderPeriodDays") as string),
@@ -43,7 +34,7 @@ export async function updateSystemSettingsAction(
     ),
   };
 
-  await updateSystemSettings(actor.id, updates);
+  await updateSystemSettings(account.id, updates);
   revalidatePath("/admin/system-settings");
   return { success: true };
 }

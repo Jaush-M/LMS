@@ -1,7 +1,4 @@
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { requireAuthPage } from "@/lib/auth-guard";
 import Link from "next/link";
 import { getCalendarFeed } from "@/lib/academic-calendar";
 
@@ -21,17 +18,9 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export default async function StudentAcademicCalendarPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
+  const { account } = await requireAuthPage({ roles: ["STUDENT"] });
 
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true, mustChangePassword: true },
-  });
-  if (!actor || actor.role !== "STUDENT") redirect("/dashboard");
-  if (actor.mustChangePassword) redirect("/change-password");
-
-  const feed = await getCalendarFeed(actor.id);
+  const feed = await getCalendarFeed(account.id);
 
   return (
     <main className="p-8 space-y-6">

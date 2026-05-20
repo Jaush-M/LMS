@@ -1,22 +1,13 @@
-import { auth } from "@/lib/auth";
+import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChatForm } from "./chat-form";
 
 export default async function StudentChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true, mustChangePassword: true },
-  });
-  if (!actor || actor.role !== "STUDENT") redirect("/dashboard");
-  if (actor.mustChangePassword) redirect("/change-password");
+  const { account } = await requireAuthPage({ roles: ["STUDENT"] });
 
   const mo = await prisma.moduleOffering.findUnique({
     where: { id },
@@ -29,7 +20,7 @@ export default async function StudentChatPage({ params }: { params: Promise<{ id
 
   // Verify enrollment
   const enrollment = await prisma.enrollment.findFirst({
-    where: { studentId: actor.id, courseOfferingId: mo.courseOfferingId, status: "ACTIVE" },
+    where: { studentId: account.id, courseOfferingId: mo.courseOfferingId, status: "ACTIVE" },
   });
   if (!enrollment) notFound();
 
@@ -41,9 +32,9 @@ export default async function StudentChatPage({ params }: { params: Promise<{ id
   });
 
   await prisma.chatParticipantActivity.upsert({
-    where: { chatId_userId: { chatId: mo.moduleGroupChat.id, userId: actor.id } },
+    where: { chatId_userId: { chatId: mo.moduleGroupChat.id, userId: account.id } },
     update: { lastSeenAt: new Date() },
-    create: { chatId: mo.moduleGroupChat.id, userId: actor.id, lastSeenAt: new Date() },
+    create: { chatId: mo.moduleGroupChat.id, userId: account.id, lastSeenAt: new Date() },
   });
 
   return (
@@ -59,7 +50,7 @@ export default async function StudentChatPage({ params }: { params: Promise<{ id
         ) : (
           <ul className="divide-y divide-gray-100">
             {messages.map((msg) => {
-              const isMe = msg.senderId === actor.id;
+              const isMe = msg.senderId === account.id;
               return (
                 <li key={msg.id} className={`px-5 py-3 ${isMe ? "bg-blue-50" : ""}`}>
                   <div className="flex items-baseline gap-2">
@@ -76,7 +67,7 @@ export default async function StudentChatPage({ params }: { params: Promise<{ id
       </div>
 
       {!mo.moduleGroupChat.isReadOnly && (
-        <ChatForm chatId={mo.moduleGroupChat.id} moduleOfferingId={id} senderId={actor.id} />
+        <ChatForm chatId={mo.moduleGroupChat.id} moduleOfferingId={id} senderId={account.id} />
       )}
     </main>
   );

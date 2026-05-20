@@ -1,22 +1,11 @@
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { requireAuthPage } from "@/lib/auth-guard";
 import { listFaculties } from "@/lib/catalogue";
 import { FacultyRow } from "./faculty-row";
 import { CreateFacultyForm } from "./create-faculty-form";
 import Link from "next/link";
 
 export default async function FacultiesPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { role: true, mustChangePassword: true },
-  });
-  if (!actor || actor.role !== "ADMINISTRATOR" && actor.role !== "SUPER_ADMINISTRATOR") redirect("/dashboard");
-  if (actor.mustChangePassword) redirect("/change-password");
+  await requireAuthPage({ minRole: "ADMINISTRATOR" });
 
   const faculties = await listFaculties({ includeInactive: true });
 

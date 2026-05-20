@@ -1,22 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { requireAuthRedirect } from "@/lib/auth-guard";
 import { createAssignment, publishAssignment, unpublishAssignment, extendDeadline } from "@/lib/assignments";
 
-async function getEducatorAccount() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-  const account = await prisma.userAccount.findUnique({ where: { userId: session.user.id } });
-  if (!account || account.role !== "EDUCATOR") redirect("/dashboard");
-  if (account.mustChangePassword) redirect("/change-password");
-  return account;
-}
-
 export async function createAssignmentAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
   const title = (formData.get("title") as string)?.trim();
   const body = (formData.get("body") as string)?.trim();
@@ -45,7 +34,7 @@ export async function createAssignmentAction(_prev: unknown, formData: FormData)
 }
 
 export async function publishAssignmentAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const id = formData.get("id") as string;
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
 
@@ -59,7 +48,7 @@ export async function publishAssignmentAction(_prev: unknown, formData: FormData
 }
 
 export async function unpublishAssignmentAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const id = formData.get("id") as string;
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
 
@@ -73,7 +62,7 @@ export async function unpublishAssignmentAction(_prev: unknown, formData: FormDa
 }
 
 export async function extendDeadlineAction(_prev: unknown, formData: FormData) {
-  const account = await getEducatorAccount();
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
   const assignmentId = formData.get("assignmentId") as string;
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
   const newDeadlineRaw = formData.get("newDeadline") as string;

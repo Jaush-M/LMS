@@ -1,25 +1,16 @@
-import { auth } from "@/lib/auth";
+import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AssignmentActionsForm } from "./assignment-actions-form";
 
 export default async function EducatorAssignmentDetailPage({ params }: { params: Promise<{ id: string; assignmentId: string }> }) {
   const { id, assignmentId } = await params;
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const actor = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true, mustChangePassword: true },
-  });
-  if (!actor || actor.role !== "EDUCATOR") redirect("/dashboard");
-  if (actor.mustChangePassword) redirect("/change-password");
+  const { account } = await requireAuthPage({ roles: ["EDUCATOR"] });
 
   const mo = await prisma.moduleOffering.findUnique({
-    where: { id, primaryEducatorId: actor.id },
+    where: { id, primaryEducatorId: account.id },
     include: { templateModule: { include: { module: true } } },
   });
   if (!mo) notFound();

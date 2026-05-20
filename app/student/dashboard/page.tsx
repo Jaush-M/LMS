@@ -1,23 +1,10 @@
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { requireAuthPage } from "@/lib/auth-guard";
 import Link from "next/link";
 import { getStudentDashboard } from "@/lib/student-dashboard";
 
 export default async function StudentDashboardPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-
-  const userAccount = await prisma.userAccount.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, role: true, mustChangePassword: true },
-  });
-
-  if (!userAccount || userAccount.role !== "STUDENT") redirect("/dashboard");
-  if (userAccount.mustChangePassword) redirect("/change-password");
-
-  const data = await getStudentDashboard(userAccount.id);
+  const { user, account } = await requireAuthPage({ roles: ["STUDENT"] });
+  const data = await getStudentDashboard(account.id);
 
   const now = new Date();
 
@@ -25,7 +12,7 @@ export default async function StudentDashboardPage() {
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-5xl px-4 py-8">
         <h1 className="text-2xl font-semibold text-gray-900">Guided Learning Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">Welcome, {session.user.name}</p>
+        <p className="mt-1 text-sm text-gray-500">Welcome, {user.name}</p>
 
         {/* Attention Items */}
         {data.attentionItems.length > 0 && (

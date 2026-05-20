@@ -1,22 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { requireAuthRedirect } from "@/lib/auth-guard";
 import { createClassSession } from "@/lib/class-sessions";
 
-async function getAdminAccount() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-  const account = await prisma.userAccount.findUnique({ where: { userId: session.user.id } });
-  if (!account || account.role !== "ADMINISTRATOR") redirect("/dashboard");
-  if (account.mustChangePassword) redirect("/change-password");
-  return account;
-}
-
 export async function createClassSessionAction(_prev: unknown, formData: FormData) {
-  const account = await getAdminAccount();
+  const { account } = await requireAuthRedirect({ minRole: "ADMINISTRATOR" });
   const moduleOfferingId = formData.get("moduleOfferingId") as string;
   const courseOfferingId = formData.get("courseOfferingId") as string;
   const sessionTypeId = formData.get("sessionTypeId") as string;

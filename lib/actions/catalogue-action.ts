@@ -1,9 +1,7 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { requireAuthAction } from "@/lib/auth-guard";
 import {
   createFaculty,
   editFaculty,
@@ -26,26 +24,13 @@ import {
 } from "@/lib/catalogue";
 import type { AwardLevel } from "@/lib/generated/prisma/enums";
 
-async function requireAdministrator() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
-
-  const actor = await prisma.userAccount.findUniqueOrThrow({
-    where: { userId: session.user.id },
-    select: { role: true },
-  });
-  if (actor.role !== "ADMINISTRATOR" && actor.role !== "SUPER_ADMINISTRATOR") {
-    throw new Error("Unauthorized");
-  }
-}
-
 export type ActionState = { error?: string } | null;
 
 // ── Faculty ───────────────────────────────────────────────────────────────
 
 export async function createFacultyAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await createFaculty({ name });
@@ -57,8 +42,8 @@ export async function createFacultyAction(_prev: ActionState, formData: FormData
 }
 
 export async function editFacultyAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
@@ -71,7 +56,7 @@ export async function editFacultyAction(_prev: ActionState, formData: FormData):
 }
 
 export async function markFacultyInactiveAction(id: string): Promise<void> {
-  await requireAdministrator();
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   await markFacultyInactive(id);
   revalidatePath("/admin/catalogue/faculties");
 }
@@ -81,8 +66,8 @@ export async function markFacultyInactiveAction(id: string): Promise<void> {
 const VALID_AWARD_LEVELS: AwardLevel[] = ["FOUNDATION", "DIPLOMA", "DEGREE", "MASTERS", "PHD"];
 
 export async function createCourseAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const code = (formData.get("code") as string)?.trim().toUpperCase();
     const name = (formData.get("name") as string)?.trim();
     const awardLevel = formData.get("awardLevel") as AwardLevel;
@@ -103,8 +88,8 @@ export async function createCourseAction(_prev: ActionState, formData: FormData)
 }
 
 export async function editCourseAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string)?.trim();
     const awardLevel = formData.get("awardLevel") as AwardLevel;
@@ -124,7 +109,7 @@ export async function editCourseAction(_prev: ActionState, formData: FormData): 
 }
 
 export async function markCourseInactiveAction(id: string): Promise<void> {
-  await requireAdministrator();
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   await markCourseInactive(id);
   revalidatePath("/admin/catalogue/courses");
 }
@@ -132,8 +117,8 @@ export async function markCourseInactiveAction(id: string): Promise<void> {
 // ── Module ────────────────────────────────────────────────────────────────
 
 export async function createModuleAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const code = (formData.get("code") as string)?.trim().toUpperCase();
     const name = (formData.get("name") as string)?.trim();
     const description = (formData.get("description") as string)?.trim() || undefined;
@@ -150,8 +135,8 @@ export async function createModuleAction(_prev: ActionState, formData: FormData)
 }
 
 export async function editModuleAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string)?.trim();
     const description = (formData.get("description") as string)?.trim() || null;
@@ -167,7 +152,7 @@ export async function editModuleAction(_prev: ActionState, formData: FormData): 
 }
 
 export async function markModuleInactiveAction(id: string): Promise<void> {
-  await requireAdministrator();
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   await markModuleInactive(id);
   revalidatePath("/admin/catalogue/modules");
 }
@@ -175,8 +160,8 @@ export async function markModuleInactiveAction(id: string): Promise<void> {
 // ── Intake ────────────────────────────────────────────────────────────────
 
 export async function createIntakeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await createIntake({ name });
@@ -188,8 +173,8 @@ export async function createIntakeAction(_prev: ActionState, formData: FormData)
 }
 
 export async function editIntakeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
@@ -202,7 +187,7 @@ export async function editIntakeAction(_prev: ActionState, formData: FormData): 
 }
 
 export async function markIntakeInactiveAction(id: string): Promise<void> {
-  await requireAdministrator();
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   await markIntakeInactive(id);
   revalidatePath("/admin/catalogue/intakes");
 }
@@ -210,8 +195,8 @@ export async function markIntakeInactiveAction(id: string): Promise<void> {
 // ── StudyMode ─────────────────────────────────────────────────────────────
 
 export async function createStudyModeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await createStudyMode({ name });
@@ -223,8 +208,8 @@ export async function createStudyModeAction(_prev: ActionState, formData: FormDa
 }
 
 export async function editStudyModeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
@@ -237,7 +222,7 @@ export async function editStudyModeAction(_prev: ActionState, formData: FormData
 }
 
 export async function markStudyModeInactiveAction(id: string): Promise<void> {
-  await requireAdministrator();
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   await markStudyModeInactive(id);
   revalidatePath("/admin/catalogue/study-modes");
 }
@@ -245,8 +230,8 @@ export async function markStudyModeInactiveAction(id: string): Promise<void> {
 // ── SessionType ───────────────────────────────────────────────────────────
 
 export async function createSessionTypeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
     await createSessionType({ name });
@@ -258,8 +243,8 @@ export async function createSessionTypeAction(_prev: ActionState, formData: Form
 }
 
 export async function editSessionTypeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string)?.trim();
     if (!name) return { error: "Name is required" };
@@ -272,7 +257,7 @@ export async function editSessionTypeAction(_prev: ActionState, formData: FormDa
 }
 
 export async function markSessionTypeInactiveAction(id: string): Promise<void> {
-  await requireAdministrator();
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   await markSessionTypeInactive(id);
   revalidatePath("/admin/catalogue/session-types");
 }

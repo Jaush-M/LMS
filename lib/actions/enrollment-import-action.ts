@@ -1,9 +1,7 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { requireAuthAction } from "@/lib/auth-guard";
 import {
   commitEnrollmentCsvImport,
   previewEnrollmentCsvImport,
@@ -21,18 +19,6 @@ export type EnrollmentImportState = {
   result?: CommitEnrollmentCsvImportResult;
 } | null;
 
-async function requireAdministrator() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
-
-  const actor = await prisma.userAccount.findUniqueOrThrow({
-    where: { userId: session.user.id },
-    select: { id: true, role: true },
-  });
-  if (actor.role !== "ADMINISTRATOR") throw new Error("Unauthorized");
-  return actor;
-}
-
 async function readCsvText(formData: FormData): Promise<string> {
   const csvFile = formData.get("csvFile");
   if (csvFile instanceof File && csvFile.size > 0) {
@@ -46,9 +32,8 @@ export async function previewEnrollmentCsvImportAction(
   _prev: EnrollmentImportState,
   formData: FormData
 ): Promise<EnrollmentImportState> {
+  await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    await requireAdministrator();
-
     const courseOfferingId = (formData.get("courseOfferingId") as string) ?? "";
     const createMissingAccounts = formData.get("createMissingAccounts") === "on";
     const csvText = await readCsvText(formData);
@@ -72,8 +57,8 @@ export async function commitEnrollmentCsvImportAction(
   _prev: EnrollmentImportState,
   formData: FormData
 ): Promise<EnrollmentImportState> {
+  const { account } = await requireAuthAction({ minRole: "ADMINISTRATOR" });
   try {
-    const actor = await requireAdministrator();
     const courseOfferingId = (formData.get("courseOfferingId") as string) ?? "";
     const csvText = ((formData.get("csvText") as string) ?? "").trim();
     const createMissingAccounts = formData.get("createMissingAccounts") === "true";
@@ -85,7 +70,7 @@ export async function commitEnrollmentCsvImportAction(
       courseOfferingId,
       csvText,
       createMissingAccounts,
-      enrolledById: actor.id,
+      enrolledById: account.id,
     });
 
     revalidatePath("/admin/enrollment-import");
