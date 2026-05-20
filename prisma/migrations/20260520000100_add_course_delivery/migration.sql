@@ -77,3 +77,9 @@ ALTER TABLE "ModuleOffering" ADD CONSTRAINT "ModuleOffering_studyModeId_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "ModuleGroupChat" ADD CONSTRAINT "ModuleGroupChat_moduleOfferingId_fkey" FOREIGN KEY ("moduleOfferingId") REFERENCES "ModuleOffering"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CourseOfferingEvent" ADD CONSTRAINT "CourseOfferingEvent_courseOfferingId_fkey" FOREIGN KEY ("courseOfferingId") REFERENCES "CourseOffering"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ModuleOfferingEvent" ADD CONSTRAINT "ModuleOfferingEvent_moduleOfferingId_fkey" FOREIGN KEY ("moduleOfferingId") REFERENCES "ModuleOffering"("id") ON DELETE CASCADE ON UPDATE CASCADE;
