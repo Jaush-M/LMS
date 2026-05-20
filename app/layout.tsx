@@ -11,8 +11,8 @@ const jakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "LMS",
-  description: "Learning Management System",
+  title: "LMS Portal",
+  description: "LMS Portal",
 };
 
 export default function RootLayout({

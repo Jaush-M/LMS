@@ -30,7 +30,7 @@ export default async function ChangePasswordPage() {
             className="font-extrabold text-[17px] tracking-[-0.025em]"
             style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
           >
-            LMS
+            LMS Portal
           </span>
         </div>
 
@@ -60,7 +60,7 @@ export default async function ChangePasswordPage() {
         </div>
 
         <p className="text-center text-xs mt-5" style={{ color: "var(--ink-4)" }}>
-          Learning Management System
+          LMS Portal
         </p>
       </div>
     </div>

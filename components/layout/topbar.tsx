@@ -32,7 +32,7 @@ function getTitle(pathname: string): string {
   for (const [prefix, title] of Object.entries(PAGE_TITLES)) {
     if (pathname.startsWith(prefix)) return title;
   }
-  return "LMS";
+  return "LMS Portal";
 }
 
 function getRoleLabel(role: UserRole): string {
