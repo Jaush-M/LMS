@@ -325,6 +325,158 @@ async function main() {
   });
   void csvOffering;
 
+  // ── SystemSettings ────────────────────────────────────────────────────────
+  await prisma.systemSettings.create({
+    data: { attendanceCorrectionWindowDays: 8 },
+  });
+
+  // ── phases 4–9 seed: target January 2025 offering, first module offering ─
+  const fullOfferingMOs = await prisma.moduleOffering.findMany({
+    where: { courseOfferingId: fullOffering.id },
+    orderBy: { createdAt: "asc" },
+  });
+  const mo1 = fullOfferingMOs[0]; // Programming Fundamentals
+
+  // ── content sections ──────────────────────────────────────────────────────
+  const section1 = await prisma.contentSection.create({
+    data: {
+      moduleOfferingId: mo1.id,
+      createdById: educatorAccount.id,
+      title: "Week 1: Introduction",
+      sortOrder: 1,
+    },
+  });
+  await prisma.moduleContent.createMany({
+    data: [
+      {
+        contentSectionId: section1.id,
+        createdById: educatorAccount.id,
+        title: "Course Overview",
+        body: "<p>Welcome to Programming Fundamentals. You will learn Python from scratch.</p>",
+        status: "PUBLISHED" as const,
+        sortOrder: 1,
+      },
+      {
+        contentSectionId: section1.id,
+        createdById: educatorAccount.id,
+        title: "Setup Instructions (Draft)",
+        body: "<p>Install Python 3.11 from python.org.</p>",
+        status: "DRAFT" as const,
+        sortOrder: 2,
+      },
+    ],
+  });
+
+  // ── assignment + assessment components (weights total 100%) ───────────────
+  const assignment1 = await prisma.assignment.create({
+    data: {
+      moduleOfferingId: mo1.id,
+      createdById: educatorAccount.id,
+      title: "Assignment 1: Hello World",
+      body: "<p>Write a Python program that prints Hello, World!</p>",
+      deadline: new Date("2025-03-15T23:59:00Z"),
+      maximumMark: 100,
+      status: "PUBLISHED",
+    },
+  });
+  await prisma.assessmentComponent.create({
+    data: {
+      moduleOfferingId: mo1.id,
+      createdById: educatorAccount.id,
+      assignmentId: assignment1.id,
+      title: "Assignment 1",
+      type: "ONLINE_ASSIGNMENT",
+      weightPercent: 40,
+      maximumMark: 100,
+      sortOrder: 1,
+    },
+  });
+  await prisma.assessmentComponent.create({
+    data: {
+      moduleOfferingId: mo1.id,
+      createdById: educatorAccount.id,
+      title: "Final Exam",
+      type: "OFFLINE_ASSESSMENT",
+      weightPercent: 60,
+      maximumMark: 100,
+      sortOrder: 2,
+    },
+  });
+
+  // ── class sessions ────────────────────────────────────────────────────────
+  const lectureType = await prisma.sessionType.findFirstOrThrow({ where: { name: "Lecture" } });
+  const seedNow = new Date();
+  const recentStart = new Date(seedNow.getTime() - 2 * 24 * 60 * 60 * 1000);
+  const lockedStart = new Date(seedNow.getTime() - 10 * 24 * 60 * 60 * 1000);
+
+  const recentSession = await prisma.classSession.create({
+    data: {
+      moduleOfferingId: mo1.id,
+      sessionTypeId: lectureType.id,
+      startAt: recentStart,
+      finishAt: new Date(recentStart.getTime() + 2 * 60 * 60 * 1000),
+      sessionLocation: "Room A101",
+      attendanceRequired: true,
+      createdById: administrator.id,
+    },
+  });
+  const lockedSession = await prisma.classSession.create({
+    data: {
+      moduleOfferingId: mo1.id,
+      sessionTypeId: lectureType.id,
+      startAt: lockedStart,
+      finishAt: new Date(lockedStart.getTime() + 2 * 60 * 60 * 1000),
+      sessionLocation: "Room A101",
+      attendanceRequired: true,
+      createdById: administrator.id,
+    },
+  });
+  void lockedSession;
+
+  const recentSubAt = new Date(recentStart.getTime() + 60 * 60 * 1000);
+  await prisma.attendanceRecord.create({
+    data: { classSessionId: recentSession.id, studentId: student1.id, status: "PRESENT", submittedById: educatorAccount.id, submittedAt: recentSubAt },
+  });
+  await prisma.educatorAttendanceRecord.create({
+    data: { classSessionId: recentSession.id, educatorId: educatorAccount.id, submittedAttendanceAt: recentSubAt },
+  });
+
+  const lockedSubAt = new Date(lockedStart.getTime() + 60 * 60 * 1000);
+  await prisma.attendanceRecord.create({
+    data: { classSessionId: lockedSession.id, studentId: student1.id, status: "PRESENT", submittedById: educatorAccount.id, submittedAt: lockedSubAt },
+  });
+  await prisma.educatorAttendanceRecord.create({
+    data: { classSessionId: lockedSession.id, educatorId: educatorAccount.id, submittedAttendanceAt: lockedSubAt },
+  });
+
+  // ── chat messages ─────────────────────────────────────────────────────────
+  const mo1Chat = await prisma.moduleGroupChat.findUniqueOrThrow({ where: { moduleOfferingId: mo1.id } });
+  await prisma.chatMessage.create({
+    data: { chatId: mo1Chat.id, senderId: educatorAccount.id, body: "Welcome to the module chat! Ask questions here." },
+  });
+  const mentionMsg = await prisma.chatMessage.create({
+    data: { chatId: mo1Chat.id, senderId: student1.id, body: "@E000001 When is Assignment 1 due?" },
+  });
+  await prisma.notification.create({
+    data: { recipientId: educatorAccount.id, sourceType: "CHAT_MENTION", chatMessageId: mentionMsg.id, title: "You were mentioned in module chat" },
+  });
+  await prisma.notification.create({
+    data: { recipientId: student1.id, sourceType: "ASSIGNMENT", assignmentId: assignment1.id, title: "New Assignment Published" },
+  });
+
+  // ── feedback period (closed) + response ───────────────────────────────────
+  const feedbackPeriod = await prisma.feedbackPeriod.create({
+    data: {
+      moduleOfferingId: mo1.id,
+      openAt: new Date("2025-02-01T00:00:00Z"),
+      closeAt: new Date("2025-02-28T23:59:59Z"),
+      createdById: administrator.id,
+    },
+  });
+  await prisma.feedbackResponse.create({
+    data: { feedbackPeriodId: feedbackPeriod.id, studentId: student1.id, rating: 4, comment: "Well-structured lectures." },
+  });
+
   console.log("Seed complete");
   console.log(`Super Administrator: SA000001@lms.edu.mv / ${TEMP_PASSWORD}`);
   console.log(`Administrator:       A000001@lms.edu.mv / ${TEMP_PASSWORD}`);
