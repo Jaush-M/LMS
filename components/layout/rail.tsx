@@ -58,22 +58,11 @@ function getNavItems(role: UserRole): NavItem[] {
   return [];
 }
 
-function getDisplayName(role: UserRole): string {
-  switch (role) {
-    case "STUDENT":           return "Student";
-    case "EDUCATOR":          return "Educator";
-    case "ADMINISTRATOR":     return "Administrator";
-    case "SUPER_ADMINISTRATOR": return "Super Admin";
-  }
-}
-
 interface RailProps {
   role: UserRole;
-  userName: string;
-  userInitials: string;
 }
 
-export function Rail({ role, userName, userInitials }: RailProps) {
+export function Rail({ role }: RailProps) {
   const pathname = usePathname();
 
   const navItems = getNavItems(role);
@@ -174,32 +163,6 @@ export function Rail({ role, userName, userInitials }: RailProps) {
         </Link>
       </nav>
 
-      {/* Footer */}
-      <div className="mt-auto pt-3.5">
-        <div
-          className="rounded-[14px] p-3 border border-line"
-          style={{ background: "var(--surface-2)" }}
-        >
-          <div
-            className="text-[10.5px] uppercase tracking-[0.08em] font-bold"
-            style={{ color: "var(--ink-4)" }}
-          >
-            Signed in as
-          </div>
-          <div
-            className="font-bold text-[14px] mt-0.5 truncate"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {userName}
-          </div>
-          <div
-            className="text-[11px] mt-0.5 font-medium"
-            style={{ color: "var(--ink-4)" }}
-          >
-            {getDisplayName(role)}
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

@@ -11,7 +11,7 @@ export default async function EducatorLayout({
 
   return (
     <div className="app-shell">
-      <Rail role={account.role} userName={user.name} userInitials={user.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()} />
+      <Rail role={account.role} />
       <div className="flex flex-col min-w-0">
         <Topbar userName={user.name} userRole={account.role} userEmail={user.email} />
         <main className="canvas">{children}</main>
