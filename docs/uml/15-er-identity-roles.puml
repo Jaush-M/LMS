@@ -1,0 +1,69 @@
+@startuml er-identity-roles
+skinparam linetype ortho
+title Cluster: Identity & Roles
+
+entity "UserAccount" as UA {
+  *id PK
+  --
+  role : student|educator|administrator|super_administrator
+  generatedIdentifier : unique
+  institutionalEmail : unique
+  fullName
+  phone
+  status : inactive|active|disabled
+  mustChangePassword : bool
+  createdAt, updatedAt
+}
+
+entity "StudentProfile" as SP {
+  *id PK
+  --
+  *userAccountId FK
+  createdAt, updatedAt
+}
+
+entity "EducatorProfile" as EP {
+  *id PK
+  --
+  *userAccountId FK
+  homeFacultyId FK <<nullable>>
+  createdAt, updatedAt
+}
+
+entity "AdministratorProfile" as AP {
+  *id PK
+  --
+  *userAccountId FK
+  createdAt, updatedAt
+}
+
+entity "AuditLogEntry" as ALE {
+  *id PK
+  --
+  *actorId FK
+  eventType : operational|system
+  action
+  entityType, entityId
+  beforeJson, afterJson
+  reason <<nullable>>
+  createdAt
+}
+
+entity "Notification" as NOTIF {
+  *id PK
+  --
+  *recipientId FK
+  type
+  title, body
+  readAt <<nullable>>
+  relatedEntityType
+  relatedEntityId
+}
+
+UA ||--o| SP     : "1 student profile"
+UA ||--o| EP     : "1 educator profile"
+UA ||--o| AP     : "1 admin profile"
+UA ||--o{ ALE    : "creates"
+UA ||--o{ NOTIF  : "receives"
+
+@enduml

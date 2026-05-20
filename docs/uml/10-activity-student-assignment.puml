@@ -1,0 +1,56 @@
+@startuml activity-student-assignment
+skinparam activityDiamondBackgroundColor #LightYellow
+skinparam activityBackgroundColor #LightBlue
+start
+
+:Student opens dashboard or assignment list;
+
+:Open Assignment;
+
+if (Assignment status = published?) then (no)
+  :Show "Not available";
+  stop
+else (yes)
+endif
+
+if (Student has EffectiveModuleAccess?) then (no)
+  :Show "Access denied";
+  stop
+else (yes)
+endif
+
+:Review instructions, attachments, and shared links;
+
+:Upload submission file;
+
+if (File within size limit?) then (no)
+  :Show file size error;
+  stop
+else (yes)
+endif
+
+if (Deadline passed?) then (yes)
+  :Mark submission status = late;
+else (no)
+  :Mark submission status = submitted;
+endif
+
+if (Existing active submission? Is it unmarked?) then (yes — replace)
+  :Replace previous submission\n(set old isActive = false);
+else (no)
+endif
+
+:Save Submission and FileAsset;
+
+:Notify assigned Educator;
+
+if (Educator releases mark?) then (yes)
+  :Student views released mark and feedback;
+  :Submission status = marked;
+  stop
+else (no — pending)
+  :Submission remains submitted or late;
+  stop
+endif
+
+@enduml

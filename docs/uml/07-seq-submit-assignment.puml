@@ -1,0 +1,33 @@
+@startuml seq-submit-assignment
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Student
+participant "LMS App" as App
+participant "Storage Driver" as SD
+database "PostgreSQL" as DB
+participant "Notification Service" as NS
+
+Student -> App : Open published Assignment
+App -> DB : Verify Assignment status = published\nand Student has EffectiveModuleAccess
+DB --> App : ok
+App --> Student : Display assignment instructions and deadline
+Student -> App : Upload submission file
+App -> App : Validate file size ≤ category limit
+alt file too large
+  App --> Student : File size error
+else size ok
+  App -> SD : Store file bytes
+  SD --> App : storageKey
+  App -> DB : INSERT FileAsset\n(storageKey, mimeType, sizeBytes, category=assignment_submission)
+  DB --> App : fileAssetId
+  App -> App : Determine status:\nsubmittedAt > deadlineAt → late, else submitted
+  App -> DB : UPSERT Submission\n(isActive=true, status)
+  DB --> App : submissionId
+  App -> NS : Notify assigned Educator\n(new/replaced submission)
+  NS -> DB : INSERT Notification
+  DB --> NS : ok
+  NS --> App : ok
+  App --> Student : Submission confirmed (status: submitted | late)
+end
+@enduml

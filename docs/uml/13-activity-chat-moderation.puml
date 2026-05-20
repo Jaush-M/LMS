@@ -1,0 +1,38 @@
+@startuml activity-chat-moderation
+skinparam activityDiamondBackgroundColor #LightYellow
+skinparam activityBackgroundColor #LightBlue
+start
+
+:Administrator opens reported or reviewed ModuleGroupChat;
+
+:Inspect message body and attachments;
+
+if (Content inappropriate or unsafe?) then (no)
+  :No action required;
+  stop
+else (yes)
+endif
+
+if (Should attachment access be removed?) then (yes)
+  :Set FileAsset.status = moderated;
+else (no)
+endif
+
+:Remove ChatMessage from active view;
+:Set ChatMessage.status = removed;
+:Set ChatMessage.removedById = administratorId;
+:Set ChatMessage.removedAt = now();
+:Set ChatMessage.moderationReason = reason entered;
+
+note right
+  Removed messages remain in chat history
+  as a "[message removed]" marker —
+  they are never hard-deleted.
+end note
+
+:Create AuditLogEntry\n(action=chat_message_moderated,\nbeforeJson=original body,\nreason=moderationReason);
+
+:Moderated content visible as removed marker;
+stop
+
+@enduml

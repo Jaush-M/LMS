@@ -1,0 +1,458 @@
+@startuml class-diagram
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide empty members
+
+' ─── Identity ───────────────────────────────────────────────────
+package "Identity" {
+  class UserAccount {
+    +id
+    +role : student|educator|administrator|super_administrator
+    +generatedIdentifier : unique
+    +institutionalEmail : unique
+    +fullName
+    +phone
+    +status : inactive|active|disabled
+    +mustChangePassword : bool
+  }
+  class StudentProfile {
+    +id
+    +userAccountId
+  }
+  class EducatorProfile {
+    +id
+    +userAccountId
+    +homeFacultyId
+  }
+  class AdministratorProfile {
+    +id
+    +userAccountId
+  }
+}
+
+' ─── Academic Catalogue ─────────────────────────────────────────
+package "Academic Catalogue" {
+  class Faculty {
+    +id
+    +name
+    +code
+    +status : active|inactive
+  }
+  class AwardingBody {
+    +id
+    +name
+    +status : active|inactive
+  }
+  class Course {
+    +id
+    +facultyId
+    +awardingBodyId
+    +code : unique
+    +name
+    +awardLevel
+    +status : active|inactive
+  }
+  class Module {
+    +id
+    +code : unique
+    +name
+    +description
+    +status : active|inactive
+  }
+  class Intake {
+    +id
+    +name
+    +status : active|inactive
+  }
+  class StudyMode {
+    +id
+    +name
+    +status : active|inactive
+  }
+}
+
+' ─── Curriculum Templates ────────────────────────────────────────
+package "Curriculum Templates" {
+  class CurriculumTemplate {
+    +id
+    +courseId
+    +versionLabel
+    +status : draft|active|inactive
+  }
+  class AcademicLevel {
+    +id
+    +curriculumTemplateId
+    +label
+    +sortOrder
+    +expectedCredits
+  }
+  class TemplateModule {
+    +id
+    +curriculumTemplateId
+    +academicLevelId
+    +moduleId
+    +credits
+    +sortOrder
+  }
+  class TemplateModulePrerequisite {
+    +id
+    +templateModuleId
+    +prerequisiteTemplateModuleId
+  }
+  class DefaultAssessmentComponent {
+    +id
+    +templateModuleId
+    +title
+    +type : online_assignment|offline_assessment
+    +weightPercent
+    +maximumMark
+    +sortOrder
+  }
+}
+
+' ─── Course Delivery ─────────────────────────────────────────────
+package "Course Delivery" {
+  class CourseOffering {
+    +id
+    +courseId
+    +intakeId
+    +studyModeId
+    +name
+    +startAt
+    +finishAt
+    +capacity
+    +status : planned|active|archived
+  }
+  class ModuleOffering {
+    +id
+    +courseOfferingId
+    +templateModuleId
+    +primaryEducatorId
+    +studyModeId
+    +startAt
+    +finishAt
+    +status : planned|active|archived
+  }
+}
+
+' ─── Enrollment & Access ─────────────────────────────────────────
+package "Enrollment & Access" {
+  class Enrollment {
+    +id
+    +studentId
+    +courseOfferingId
+    +isMain : bool
+    +status : active|withdrawn|completed
+    +enrolledAt
+  }
+  class ModuleEnrollmentException {
+    +id
+    +enrollmentId
+    +moduleOfferingId
+    +type : include|exclude
+    +reason
+  }
+  class CapacityOverride {
+    +id
+    +courseOfferingId
+    +studentId
+    +reason
+    +approvedById
+    +approvedAt
+  }
+}
+
+' ─── Sessions & Attendance ───────────────────────────────────────
+package "Sessions & Attendance" {
+  class SessionType {
+    +id
+    +name
+    +status : active|inactive
+  }
+  class ClassSession {
+    +id
+    +moduleOfferingId
+    +sessionTypeId
+    +title
+    +startsAt
+    +endsAt
+    +location
+    +isAttendanceRequired : bool
+  }
+  class AttendanceRecord {
+    +id
+    +classSessionId
+    +studentId
+    +status : present|absent|late|excused
+    +submittedById
+    +submittedAt
+    +lockedAt
+  }
+  class EducatorAttendanceRecord {
+    +id
+    +classSessionId
+    +educatorId
+    +submittedAttendanceAt
+  }
+  class AttendanceCorrectionRequest {
+    +id
+    +attendanceRecordId
+    +requestedById
+    +requestedStatus
+    +reason
+    +status : pending|approved|rejected
+    +resolvedById
+    +resolvedAt
+  }
+}
+
+' ─── Content & Files ─────────────────────────────────────────────
+package "Content & Files" {
+  class ContentSection {
+    +id
+    +moduleOfferingId
+    +title
+    +sortOrder
+    +status : active|hidden
+  }
+  class ModuleContentItem {
+    +id
+    +contentSectionId
+    +title
+    +bodyRichText
+    +visibility : draft|published
+    +sortOrder
+    +publishedAt
+  }
+  class FileAsset {
+    +id
+    +storageDriver : local|s3
+    +storageKey
+    +originalFilename
+    +mimeType
+    +sizeBytes
+    +category
+    +uploadedById
+    +status : active|removed|moderated
+  }
+  class SharedLink {
+    +id
+    +url
+    +label
+    +createdById
+  }
+}
+
+' ─── Assignments & Assessment ────────────────────────────────────
+package "Assignments & Assessment" {
+  class AssessmentComponent {
+    +id
+    +moduleOfferingId
+    +title
+    +type : online_assignment|offline_assessment
+    +weightPercent
+    +maximumMark
+    +sortOrder
+    +lockedAt
+  }
+  class Assignment {
+    +id
+    +moduleOfferingId
+    +assessmentComponentId
+    +contentSectionId
+    +title
+    +instructionsRichText
+    +deadlineAt
+    +publishedAt
+    +status : draft|published|archived
+  }
+  class AssignmentDeadlineExtension {
+    +id
+    +assignmentId
+    +oldDeadlineAt
+    +newDeadlineAt
+    +reason
+    +createdById
+  }
+  class Submission {
+    +id
+    +assignmentId
+    +studentId
+    +submittedAt
+    +status : submitted|late|marked
+    +isActive : bool
+  }
+  class ComponentMark {
+    +id
+    +assessmentComponentId
+    +studentId
+    +submissionId
+    +mark
+    +feedback
+    +status : draft|released
+    +releasedAt
+    +markedById
+  }
+  class FinalGrade {
+    +id
+    +moduleOfferingId
+    +studentId
+    +percentage
+    +passStatus : pass|fail
+    +status : provisional|released
+    +releasedAt
+  }
+}
+
+' ─── Communication ───────────────────────────────────────────────
+package "Communication" {
+  class CalendarEvent {
+    +id
+    +scope : institution|course_offering|module_offering
+    +courseOfferingId
+    +moduleOfferingId
+    +title
+    +description
+    +startsAt
+    +endsAt
+    +createdById
+  }
+  class Announcement {
+    +id
+    +scope : institution|course_offering|module_offering
+    +courseOfferingId
+    +moduleOfferingId
+    +title
+    +bodyRichText
+    +expiresAt
+    +createdById
+  }
+  class ModuleGroupChat {
+    +id
+    +moduleOfferingId
+    +status : active|read_only
+  }
+  class ChatMessage {
+    +id
+    +moduleGroupChatId
+    +senderId
+    +body
+    +status : active|removed
+    +editedAt
+    +removedAt
+    +removedById
+    +moderationReason
+  }
+  class Mention {
+    +id
+    +chatMessageId
+    +mentionedUserId
+  }
+  class Notification {
+    +id
+    +recipientId
+    +type
+    +title
+    +body
+    +readAt
+    +relatedEntityType
+    +relatedEntityId
+  }
+}
+
+' ─── Governance ──────────────────────────────────────────────────
+package "Governance" {
+  class ModuleFeedbackPeriod {
+    +id
+    +moduleOfferingId
+    +opensAt
+    +closesAt
+    +status : planned|open|closed
+    +createdById
+  }
+  class ModuleFeedbackResponse {
+    +id
+    +feedbackPeriodId
+    +studentId
+    +submittedAt
+    +rating
+    +comment
+    +status : active|moderated
+  }
+  class AuditLogEntry {
+    +id
+    +eventType : operational|system
+    +action
+    +actorId
+    +entityType
+    +entityId
+    +beforeJson
+    +afterJson
+    +reason
+    +createdAt
+  }
+  class SystemSetting {
+    +id
+    +key
+    +valueJson
+    +updatedById
+    +updatedAt
+  }
+}
+
+' ─── Key Relationships ───────────────────────────────────────────
+UserAccount "1" --> "0..1" StudentProfile
+UserAccount "1" --> "0..1" EducatorProfile
+UserAccount "1" --> "0..1" AdministratorProfile
+UserAccount "1" --> "*" AuditLogEntry
+UserAccount "1" --> "*" Notification
+
+Faculty "1" --> "1..*" Course
+AwardingBody "1" --> "*" Course
+Course "1" --> "1" CurriculumTemplate
+CurriculumTemplate "1" --> "1..*" AcademicLevel
+CurriculumTemplate "1" --> "1..*" TemplateModule
+AcademicLevel "1" --> "*" TemplateModule
+TemplateModule "1" --> "*" TemplateModulePrerequisite
+TemplateModule "1" --> "*" DefaultAssessmentComponent
+Module "1" --> "*" TemplateModule
+
+Course "1" --> "*" CourseOffering
+Intake "1" --> "*" CourseOffering
+StudyMode "1" --> "*" CourseOffering
+CourseOffering "1" --> "1..*" ModuleOffering
+TemplateModule "1" --> "*" ModuleOffering
+EducatorProfile "1" --> "*" ModuleOffering
+
+StudentProfile "1" --> "*" Enrollment
+Enrollment "*" --> "1" CourseOffering
+Enrollment "1" --> "*" ModuleEnrollmentException
+ModuleEnrollmentException "*" --> "1" ModuleOffering
+CourseOffering "1" --> "*" CapacityOverride
+
+ModuleOffering "1" --> "*" ClassSession
+SessionType "1" --> "*" ClassSession
+ClassSession "1" --> "*" AttendanceRecord
+ClassSession "1" --> "0..1" EducatorAttendanceRecord
+AttendanceRecord "1" --> "*" AttendanceCorrectionRequest
+
+ModuleOffering "1" --> "*" ContentSection
+ContentSection "1" --> "*" ModuleContentItem
+ModuleOffering "1" --> "*" AssessmentComponent
+AssessmentComponent "1" --> "0..1" Assignment
+Assignment "1" --> "*" Submission
+Assignment "1" --> "*" AssignmentDeadlineExtension
+Submission "1" --> "0..1" ComponentMark
+AssessmentComponent "1" --> "*" ComponentMark
+StudentProfile "1" --> "*" ComponentMark
+ModuleOffering "1" --> "*" FinalGrade
+
+ModuleOffering "1" --> "1" ModuleGroupChat
+ModuleGroupChat "1" --> "*" ChatMessage
+ChatMessage "1" --> "*" Mention
+ChatMessage "1" --> "*" FileAsset
+ChatMessage "1" --> "*" SharedLink
+
+ModuleOffering "1" --> "*" ModuleFeedbackPeriod
+ModuleFeedbackPeriod "1" --> "*" ModuleFeedbackResponse
+@enduml

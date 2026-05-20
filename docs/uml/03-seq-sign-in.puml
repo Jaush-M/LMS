@@ -1,0 +1,27 @@
+@startuml seq-sign-in
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor User
+participant "Next.js App" as App
+participant "Better Auth" as Auth
+database "PostgreSQL" as DB
+
+User -> App : Submit institutional email + password
+App -> Auth : Forward credentials
+Auth -> DB : SELECT user by email
+DB --> Auth : UserAccount row (hashed password, status)
+Auth -> Auth : Verify password hash
+alt account disabled or inactive
+  Auth --> App : 401 Unauthorised
+  App --> User : "Account inactive or disabled"
+else credentials valid and account active
+  Auth -> DB : INSERT session row
+  DB --> Auth : Session id + token
+  Auth --> App : Session token (Set-Cookie)
+  App -> DB : SELECT LMS role + profile for userId
+  DB --> App : role, generatedIdentifier, profileId
+  App -> App : Attach role to session context
+  App --> User : Redirect to role-specific dashboard
+end
+@enduml

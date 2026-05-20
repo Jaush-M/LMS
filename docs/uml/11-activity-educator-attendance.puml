@@ -1,0 +1,55 @@
+@startuml activity-educator-attendance
+skinparam activityDiamondBackgroundColor #LightYellow
+skinparam activityBackgroundColor #LightBlue
+start
+
+:Educator opens upcoming or past ClassSession;
+
+if (Educator is primary assigned Educator?) then (no)
+  :Show "Access denied";
+  stop
+else (yes)
+endif
+
+if (Session is official (isAttendanceRequired = true)?) then (no)
+  :Attendance not required for this session;
+  stop
+else (yes)
+endif
+
+:Load class list (Students with EffectiveModuleAccess);
+
+:Mark each Student:\nPresent | Absent | Late | Excused;
+
+:Submit attendance;
+
+:Save AttendanceRecords;
+:Create EducatorAttendanceRecord;
+:Start 8-day correction window;
+:Update dashboard attendance metrics;
+
+if (Correction needed within 8-day window?) then (yes)
+  :Educator edits AttendanceRecord directly;
+  :Save updated record;
+else (no)
+endif
+
+if (Attendance locked (> 8 days)?) then (yes)
+  if (Correction still needed?) then (yes)
+    :Submit AttendanceCorrectionRequest with reason;
+    if (Administrator approves?) then (yes)
+      :Administrator updates AttendanceRecord;
+      :AuditLogEntry recorded;
+    else (no)
+      :Request rejected — record unchanged;
+    endif
+  else (no)
+  endif
+else (no)
+endif
+
+:Attendance Completion updated;
+:Educator Attendance inferred;
+stop
+
+@enduml

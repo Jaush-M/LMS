@@ -1,0 +1,70 @@
+@startuml er-delivery-enrollment
+skinparam linetype ortho
+title Cluster: Course Delivery, Enrollment & Access
+
+entity "CourseOffering" as CO {
+  *id PK
+  --
+  *courseId FK
+  *intakeId FK
+  *studyModeId FK
+  name
+  startAt, finishAt
+  capacity : default 24
+  status : planned|active|archived
+}
+
+entity "ModuleOffering" as MO {
+  *id PK
+  --
+  *courseOfferingId FK
+  *templateModuleId FK
+  *primaryEducatorId FK
+  studyModeId FK <<nullable>>
+  startAt, finishAt
+  status : planned|active|archived
+}
+
+entity "Enrollment" as ENR {
+  *id PK
+  --
+  *studentId FK
+  *courseOfferingId FK
+  isMain : bool
+  status : active|withdrawn|completed
+  enrolledAt
+}
+
+entity "ModuleEnrollmentException" as MEE {
+  *id PK
+  --
+  *enrollmentId FK
+  *moduleOfferingId FK
+  type : include|exclude
+  reason
+}
+
+entity "CapacityOverride" as CAP {
+  *id PK
+  --
+  *courseOfferingId FK
+  *studentId FK
+  reason
+  approvedById FK
+  approvedAt
+}
+
+note bottom of ENR
+  EffectiveModuleAccess is derived:
+  active Enrollment + active ModuleOfferings
+  minus exclude exceptions
+  plus explicit include exceptions.
+end note
+
+CO   ||--|{ MO   : "contains"
+CO   ||--o{ ENR  : "has enrollments"
+ENR  ||--o{ MEE  : "has exceptions"
+MEE  }|--|| MO   : "for module"
+CO   ||--o{ CAP  : "capacity overrides"
+
+@enduml

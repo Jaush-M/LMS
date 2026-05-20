@@ -1,0 +1,67 @@
+@startuml er-feedback-audit-settings
+skinparam linetype ortho
+title Cluster: Feedback, Audit & Settings
+
+entity "ModuleFeedbackPeriod" as MFP {
+  *id PK
+  --
+  *moduleOfferingId FK
+  opensAt
+  closesAt
+  status : planned|open|closed
+  createdById FK
+}
+
+entity "ModuleFeedbackResponse" as MFR {
+  *id PK
+  --
+  *feedbackPeriodId FK
+  *studentId FK
+  submittedAt
+  rating
+  comment
+  status : active|moderated
+}
+
+entity "AuditLogEntry" as ALE {
+  *id PK
+  --
+  *actorId FK
+  eventType : operational|system
+  action
+  entityType
+  entityId
+  beforeJson
+  afterJson
+  reason <<nullable>>
+  createdAt
+}
+
+entity "SystemSetting" as SS {
+  *id PK
+  --
+  key
+  valueJson
+  updatedById FK
+  updatedAt
+}
+
+note right of MFR
+  Identity hidden from Educators.
+  Administrators can see identity
+  for safety/moderation only.
+  One response per Student per Period.
+end note
+
+note right of SS
+  Keys: defaultReminderPeriodDays,
+  attendanceCorrectionWindowDays,
+  uploadLimits, passThresholdPercent,
+  attendanceRiskThresholdPercent,
+  defaultIntakes, studyModes,
+  sessionTypes, postCourseMarkingWindowDays.
+end note
+
+MFP ||--|{ MFR  : "collects"
+
+@enduml

@@ -1,0 +1,35 @@
+@startuml seq-create-course-offering
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Administrator
+participant "LMS App" as App
+database "PostgreSQL" as DB
+participant "Notification Service" as NS
+
+Administrator -> App : Select Course, Intake, dates,\nStudy Mode, capacity, Curriculum Template
+App -> DB : Validate Course active
+App -> DB : Validate Intake active
+App -> DB : Validate CurriculumTemplate status = active
+App -> App : Validate date range (start < finish)
+App -> App : Validate capacity > 0
+alt validation fails
+  App --> Administrator : Validation error
+else all valid
+  App -> DB : INSERT CourseOffering
+  DB --> App : courseOfferingId
+  App -> DB : SELECT TemplateModules for CurriculumTemplate
+  DB --> App : List of TemplateModules
+  loop for each TemplateModule
+    App -> DB : INSERT ModuleOffering
+    App -> DB : INSERT ModuleGroupChat (status=active)
+    App -> DB : INSERT AssessmentComponents\n(from DefaultAssessmentComponents)
+  end
+  App --> Administrator : Show Module Offerings — assign Educators
+  Administrator -> App : Assign primary Educator per ModuleOffering
+  App -> DB : UPDATE ModuleOffering.primaryEducatorId
+  App -> DB : INSERT AuditLogEntry\n(action=course_offering_created)
+  DB --> App : ok
+  App --> Administrator : Course Offering created successfully
+end
+@enduml

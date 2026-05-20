@@ -1,0 +1,29 @@
+@startuml seq-mark-attendance
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Educator
+participant "LMS App" as App
+database "PostgreSQL" as DB
+participant "Audit Log" as AL
+
+Educator -> App : Open assigned ClassSession
+App -> DB : SELECT ClassSession + ModuleOffering
+DB --> App : session details, primaryEducatorId
+alt Educator is not primary Educator
+  App --> Educator : Access denied
+else authorised
+  App -> DB : SELECT Students with EffectiveModuleAccess\nfor this ModuleOffering
+  DB --> App : Student list
+  App --> Educator : Display class list
+  Educator -> App : Record status per Student\n(present | absent | late | excused)
+  App -> DB : UPSERT AttendanceRecord per Student\n(submittedById = educatorId)
+  DB --> App : ok
+  App -> DB : INSERT EducatorAttendanceRecord\n(submittedAttendanceAt = now)
+  App -> App : Start attendance correction window (8 days)
+  App -> AL : INSERT AuditLogEntry\n(action=attendance_submitted)
+  App -> DB : UPDATE ModuleOffering attendance metrics
+  DB --> App : ok
+  App --> Educator : Attendance saved, correction window open
+end
+@enduml

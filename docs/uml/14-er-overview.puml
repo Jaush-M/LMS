@@ -1,0 +1,149 @@
+@startuml er-overview
+skinparam linetype ortho
+
+' High-level ER — shows all clusters and their primary cross-cluster relationships.
+' See er-detail-*.puml for cardinality within each cluster.
+
+entity "UserAccount" as UA {
+  *id PK
+  --
+  role
+  generatedIdentifier
+  institutionalEmail
+  status
+}
+
+entity "Faculty" as FAC {
+  *id PK
+  --
+  name, code, status
+}
+
+entity "Course" as CRS {
+  *id PK
+  --
+  facultyId FK
+  code, name, awardLevel
+}
+
+entity "CurriculumTemplate" as CT {
+  *id PK
+  --
+  courseId FK
+  versionLabel, status
+}
+
+entity "CourseOffering" as CO {
+  *id PK
+  --
+  courseId FK
+  intakeId FK
+  studyModeId FK
+  startAt, finishAt, capacity, status
+}
+
+entity "ModuleOffering" as MO {
+  *id PK
+  --
+  courseOfferingId FK
+  templateModuleId FK
+  primaryEducatorId FK
+  status
+}
+
+entity "Enrollment" as ENR {
+  *id PK
+  --
+  studentId FK
+  courseOfferingId FK
+  isMain, status
+}
+
+entity "ClassSession" as CS {
+  *id PK
+  --
+  moduleOfferingId FK
+  sessionTypeId FK
+  startsAt, endsAt
+}
+
+entity "AttendanceRecord" as AR {
+  *id PK
+  --
+  classSessionId FK
+  studentId FK
+  status
+}
+
+entity "Assignment" as ASMT {
+  *id PK
+  --
+  moduleOfferingId FK
+  assessmentComponentId FK
+  deadlineAt, status
+}
+
+entity "Submission" as SUB {
+  *id PK
+  --
+  assignmentId FK
+  studentId FK
+  status, isActive
+}
+
+entity "ComponentMark" as CM {
+  *id PK
+  --
+  assessmentComponentId FK
+  studentId FK
+  submissionId FK
+  status
+}
+
+entity "FinalGrade" as FG {
+  *id PK
+  --
+  moduleOfferingId FK
+  studentId FK
+  percentage, passStatus, status
+}
+
+entity "ModuleGroupChat" as MGC {
+  *id PK
+  --
+  moduleOfferingId FK
+  status
+}
+
+entity "Notification" as NOTIF {
+  *id PK
+  --
+  recipientId FK
+  type, readAt
+}
+
+entity "AuditLogEntry" as ALE {
+  *id PK
+  --
+  actorId FK
+  eventType, action
+}
+
+UA ||--o{ ENR : "student enrolls"
+FA }o--|| FAC : "home faculty"
+FAC ||--|{ CRS : "offers"
+CRS ||--|| CT : "has template"
+CT ||--|{ CO : "generates"
+CO ||--|{ MO : "contains"
+MO ||--|{ CS : "schedules"
+CS ||--|{ AR : "records"
+MO ||--|{ ASMT : "has"
+ASMT ||--|{ SUB : "receives"
+SUB ||--o| CM : "marked by"
+MO ||--|{ FG : "grades"
+MO ||--|| MGC : "owns chat"
+UA ||--o{ NOTIF : "receives"
+UA ||--o{ ALE : "creates"
+ENR }|--|| CO : "enrolls in"
+
+@enduml

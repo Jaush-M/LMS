@@ -1,0 +1,32 @@
+@startuml seq-enrol-student
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Administrator
+participant "LMS App" as App
+database "PostgreSQL" as DB
+participant "Notification Service" as NS
+
+Administrator -> App : Select Student and CourseOffering
+App -> DB : COUNT active Enrollments for CourseOffering
+DB --> App : currentCount, capacity
+alt currentCount >= capacity
+  App --> Administrator : Capacity warning shown
+  Administrator -> App : Confirm with override reason
+  App -> DB : INSERT CapacityOverride
+end
+App -> DB : Check prerequisite TemplateModule warnings
+DB --> App : prerequisite status list
+App --> Administrator : Show warnings if any
+Administrator -> App : Confirm enrollment
+App -> DB : INSERT Enrollment (isMain if first active enrollment)
+DB --> App : enrollmentId
+App -> App : Derive EffectiveModuleAccess\n(all active ModuleOfferings minus exceptions)
+App -> DB : Grant access to module content,\nassignments, calendar, ModuleGroupChats
+App -> DB : INSERT AuditLogEntry\n(action=student_enrolled)
+App -> NS : Create Notification for Student\n(type=enrollment_confirmed)
+NS -> DB : INSERT Notification
+DB --> NS : ok
+NS --> App : ok
+App --> Administrator : Enrollment confirmed
+@enduml

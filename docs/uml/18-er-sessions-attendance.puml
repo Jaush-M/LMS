@@ -1,0 +1,65 @@
+@startuml er-sessions-attendance
+skinparam linetype ortho
+title Cluster: Sessions & Attendance
+
+entity "SessionType" as ST {
+  *id PK
+  --
+  name
+  status : active|inactive
+}
+
+entity "ClassSession" as CS {
+  *id PK
+  --
+  *moduleOfferingId FK
+  *sessionTypeId FK
+  title
+  startsAt, endsAt
+  location
+  isAttendanceRequired : bool
+}
+
+entity "AttendanceRecord" as AR {
+  *id PK
+  --
+  *classSessionId FK
+  *studentId FK
+  status : present|absent|late|excused
+  submittedById FK
+  submittedAt
+  lockedAt <<nullable>>
+}
+
+entity "EducatorAttendanceRecord" as EAR {
+  *id PK
+  --
+  *classSessionId FK
+  *educatorId FK
+  submittedAttendanceAt
+}
+
+entity "AttendanceCorrectionRequest" as ACR {
+  *id PK
+  --
+  *attendanceRecordId FK
+  *requestedById FK
+  requestedStatus
+  reason
+  status : pending|approved|rejected
+  resolvedById FK <<nullable>>
+  resolvedAt <<nullable>>
+}
+
+note right of AR
+  Locks automatically after
+  attendanceCorrectionWindowDays
+  (default 8 days, configurable).
+end note
+
+ST  ||--|{ CS  : "typed by"
+CS  ||--|{ AR  : "records for students"
+CS  ||--o| EAR : "educator record"
+AR  ||--o{ ACR : "corrections requested"
+
+@enduml

@@ -1,0 +1,27 @@
+@startuml seq-mention-in-chat
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Student
+participant "LMS App" as App
+database "PostgreSQL" as DB
+participant "Notification Service" as NS
+actor Educator
+
+Student -> App : Send ChatMessage in ModuleGroupChat\n(body contains @EducatorName)
+App -> DB : Verify Student has EffectiveModuleAccess\nfor this ModuleOffering
+DB --> App : access confirmed
+App -> DB : INSERT ChatMessage\n(body, senderId, status=active)
+DB --> App : chatMessageId
+App -> DB : INSERT FileAssets / SharedLinks if any
+App -> App : Parse message body for @mentions
+App -> DB : SELECT EducatorProfile where name matches mention\nand is primary Educator for ModuleOffering
+DB --> App : mentionedUserId
+App -> DB : INSERT Mention\n(chatMessageId, mentionedUserId)
+App -> NS : Create Notification for Educator\n(type=mention)
+NS -> DB : INSERT Notification\n(recipientId=educatorId)
+DB --> NS : ok
+NS --> App : ok
+App --> Student : Message sent
+App -> Educator : Notification badge on module card + Notification Center
+@enduml
