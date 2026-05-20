@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { User, Lock, ArrowRight, BookOpen, BarChart2, Bell } from "lucide-react";
+import { DarkModeToggle } from "@/components/ui/dark-mode-toggle";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -44,23 +45,26 @@ export default function SignInPage() {
         style={{ borderRight: "1px solid var(--line)" }}
       >
         {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-[11px] grid place-items-center text-white font-extrabold text-base flex-shrink-0"
-            style={{
-              background: "var(--primary-strong)",
-              fontFamily: "var(--font-display)",
-              boxShadow: "0 8px 16px -8px oklch(0.5 0.15 162 / 0.55)",
-            }}
-          >
-            V
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-[11px] grid place-items-center text-white font-extrabold text-base flex-shrink-0"
+              style={{
+                background: "var(--primary-strong)",
+                fontFamily: "var(--font-display)",
+                boxShadow: "0 8px 16px -8px oklch(0.5 0.15 162 / 0.55)",
+              }}
+            >
+              V
+            </div>
+            <span
+              className="font-extrabold text-[17px] tracking-[-0.025em]"
+              style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
+            >
+              Villa LMS
+            </span>
           </div>
-          <span
-            className="font-extrabold text-[17px] tracking-[-0.025em]"
-            style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
-          >
-            Villa LMS
-          </span>
+          <DarkModeToggle />
         </div>
 
         {/* Form body */}

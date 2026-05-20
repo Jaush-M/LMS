@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Bell, HelpCircle } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { DarkModeToggle } from "@/components/ui/dark-mode-toggle";
 import type { UserRole } from "@/lib/generated/prisma/enums";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -86,6 +87,8 @@ export function Topbar({ userName, userRole, userEmail }: TopbarProps) {
       >
         <HelpCircle size={18} />
       </button>
+
+      <DarkModeToggle />
 
       <div
         className="flex items-center gap-2.5 py-1 pr-3 pl-1 bg-surface border border-line rounded-full"
