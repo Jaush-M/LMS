@@ -463,6 +463,9 @@ async function main() {
   await prisma.notification.create({
     data: { recipientId: student1.id, sourceType: "ASSIGNMENT", assignmentId: assignment1.id, title: "New Assignment Published" },
   });
+  await prisma.notification.create({
+    data: { recipientId: student1.id, sourceType: "CHAT_MENTION", chatMessageId: mentionMsg.id, title: "You were mentioned in module chat" },
+  });
 
   // ── feedback period (closed) + response ───────────────────────────────────
   const feedbackPeriod = await prisma.feedbackPeriod.create({
@@ -475,6 +478,17 @@ async function main() {
   });
   await prisma.feedbackResponse.create({
     data: { feedbackPeriodId: feedbackPeriod.id, studentId: student1.id, rating: 4, comment: "Well-structured lectures." },
+  });
+
+  // ── open feedback period for mo2 (TC-016: student submission test) ─────────
+  const mo2 = fullOfferingMOs[1]; // Data Structures
+  await prisma.feedbackPeriod.create({
+    data: {
+      moduleOfferingId: mo2.id,
+      openAt: new Date("2020-01-01T00:00:00Z"),
+      closeAt: new Date("2099-12-31T23:59:59Z"),
+      createdById: administrator.id,
+    },
   });
 
   console.log("Seed complete");
