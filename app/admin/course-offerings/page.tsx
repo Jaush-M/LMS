@@ -1,6 +1,11 @@
 import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 export default async function CourseOfferingsPage() {
   await requireAuthPage({ minRole: "ADMINISTRATOR" });
@@ -22,65 +27,102 @@ export default async function CourseOfferingsPage() {
   });
 
   return (
-    <main className="p-8">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Course Offerings</h1>
-        <div className="flex gap-3">
-          <Link href="/admin/course-offerings/new" className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            Create Course Offering
-          </Link>
-          <Link href="/admin/dashboard" className="text-sm text-blue-600 underline self-center">
-            Dashboard
-          </Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+            Course Offerings
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: "var(--ink-3)" }}>
+            {offerings.length} offering{offerings.length !== 1 ? "s" : ""}
+          </p>
         </div>
+        <Link
+          href="/admin/course-offerings/new"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 7,
+            padding: "8px 16px",
+            borderRadius: 11,
+            background: "var(--primary-strong)",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: "none",
+            boxShadow: "0 4px 12px -4px oklch(0.5 0.15 162 / 0.45)",
+          }}
+        >
+          <Plus size={15} />
+          New offering
+        </Link>
       </div>
 
       {offerings.length === 0 ? (
-        <p className="mt-8 text-sm text-gray-500">No course offerings yet.</p>
+        <EmptyState title="No course offerings" body="Create your first offering to get started." />
       ) : (
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium">Name</th>
-                <th className="py-2 pr-4 font-medium">Course</th>
-                <th className="py-2 pr-4 font-medium">Intake</th>
-                <th className="py-2 pr-4 font-medium">Study Mode</th>
-                <th className="py-2 pr-4 font-medium">Enrolled / Capacity</th>
-                <th className="py-2 pr-4 font-medium">Status</th>
-                <th className="py-2 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {offerings.map((o) => (
-                <tr key={o.id} className="border-b">
-                  <td className="py-2 pr-4">
-                    <Link href={`/admin/course-offerings/${o.id}`} className="text-blue-600 underline">
-                      {o.name}
-                    </Link>
-                  </td>
-                  <td className="py-2 pr-4 font-mono text-xs">{o.course.code}</td>
-                  <td className="py-2 pr-4">{o.intake.name}</td>
-                  <td className="py-2 pr-4">{o.studyMode.name}</td>
-                  <td className="py-2 pr-4">
-                    {o._count.enrollments} / {o.capacity}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <span className={`rounded px-2 py-0.5 text-xs font-medium ${o.status === "ARCHIVED" ? "bg-gray-100 text-gray-600" : "bg-green-100 text-green-700"}`}>
-                      {o.status}
-                    </span>
-                  </td>
-                  <td className="py-2">
-                    <Link href={`/admin/course-offerings/${o.id}`} className="text-sm text-blue-600 underline">
-                      View
-                    </Link>
-                  </td>
+        <Card flush>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                  {["Name", "Course", "Intake", "Mode", "Enrolled", "Status"].map((h) => (
+                    <th key={h} style={{ padding: "10px 20px", textAlign: "left", fontWeight: 700, fontSize: 11.5, color: "var(--ink-4)", letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {offerings.map((o) => {
+                  const fillPct = o.capacity > 0 ? Math.min(100, Math.round((o._count.enrollments / o.capacity) * 100)) : 0;
+                  return (
+                    <tr key={o.id} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                      <td style={{ padding: "12px 20px" }}>
+                        <Link
+                          href={`/admin/course-offerings/${o.id}`}
+                          style={{ fontWeight: 700, color: "var(--primary-deep)", textDecoration: "none", fontSize: 13.5 }}
+                        >
+                          {o.name}
+                        </Link>
+                        <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 1 }}>
+                          {o.startAt.toLocaleDateString("en", { month: "short", year: "numeric" })}
+                          {" – "}
+                          {o.finishAt.toLocaleDateString("en", { month: "short", year: "numeric" })}
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 20px", fontFamily: "monospace", fontSize: 12, color: "var(--ink-3)" }}>
+                        {o.course.code}
+                      </td>
+                      <td style={{ padding: "12px 20px", color: "var(--ink-2)", fontSize: 12.5 }}>
+                        {o.intake.name}
+                      </td>
+                      <td style={{ padding: "12px 20px", color: "var(--ink-3)", fontSize: 12.5 }}>
+                        {o.studyMode.name}
+                      </td>
+                      <td style={{ padding: "12px 20px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 120 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-2)", flexShrink: 0 }}>
+                            {o._count.enrollments}/{o.capacity}
+                          </span>
+                          <div style={{ flex: 1 }}>
+                            <ProgressBar value={fillPct} />
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 20px" }}>
+                        <Chip variant={o.status === "ACTIVE" ? "ok" : o.status === "ARCHIVED" ? "default" : "lav"} dot size="sm">
+                          {o.status}
+                        </Chip>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
-    </main>
+    </div>
   );
 }

@@ -1,9 +1,11 @@
 import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
 import { getCalendarFeed } from "@/lib/academic-calendar";
 import { CreateInstitutionEventForm } from "./create-institution-event-form";
 import { CreateCourseOfferingEventForm } from "./create-course-offering-event-form";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty";
 
 const MALDIVES_OFFSET_MS = 5 * 60 * 60 * 1000;
 
@@ -13,11 +15,19 @@ function toMaldivesTime(date: Date): string {
 }
 
 const KIND_LABEL: Record<string, string> = {
-  INSTITUTION_EVENT: "Institution Event",
-  COURSE_OFFERING_EVENT: "Course Offering Event",
-  MODULE_OFFERING_EVENT: "Module Offering Event",
-  CLASS_SESSION: "Class Session",
-  ASSIGNMENT_DEADLINE: "Assignment Deadline",
+  INSTITUTION_EVENT: "Institution",
+  COURSE_OFFERING_EVENT: "Course",
+  MODULE_OFFERING_EVENT: "Module",
+  CLASS_SESSION: "Class session",
+  ASSIGNMENT_DEADLINE: "Deadline",
+};
+
+const KIND_CHIP: Record<string, "lav" | "peach" | "sky" | "bad" | "default"> = {
+  INSTITUTION_EVENT: "peach",
+  COURSE_OFFERING_EVENT: "sky",
+  MODULE_OFFERING_EVENT: "lav",
+  CLASS_SESSION: "sky",
+  ASSIGNMENT_DEADLINE: "bad",
 };
 
 export default async function AdministratorAcademicCalendarPage() {
@@ -33,42 +43,66 @@ export default async function AdministratorAcademicCalendarPage() {
   ]);
 
   return (
-    <main className="p-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/dashboard" className="text-sm text-gray-500 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold">Academic Calendar</h1>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div>
+        <h1
+          className="text-[22px] font-extrabold tracking-[-0.03em]"
+          style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
+        >
+          Academic Calendar
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>
+          Institution-wide and course offering events
+        </p>
       </div>
 
-      <CreateInstitutionEventForm />
-      <CreateCourseOfferingEventForm courseOfferings={courseOfferings} />
+      {/* Add events */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+        <Card>
+          <CreateInstitutionEventForm />
+        </Card>
+        <Card>
+          <CreateCourseOfferingEventForm courseOfferings={courseOfferings} />
+        </Card>
+      </div>
 
-      <section>
-        <h2 className="text-lg font-medium mb-3">Upcoming</h2>
-        {feed.length === 0 ? (
-          <p className="text-sm text-gray-500">No events.</p>
-        ) : (
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium">Start (MVT)</th>
-                <th className="py-2 pr-4 font-medium">Title</th>
-                <th className="py-2 font-medium">Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {feed.map((item) => (
-                <tr key={item.id} className="border-b">
-                  <td className="py-2 pr-4 tabular-nums">{toMaldivesTime(item.startAt)}</td>
-                  <td className="py-2 pr-4">{item.title}</td>
-                  <td className="py-2 text-gray-500">{KIND_LABEL[item.kind] ?? item.kind}</td>
+      {/* Calendar feed */}
+      {feed.length === 0 ? (
+        <EmptyState title="No upcoming events" body="Create institution or course offering events above." />
+      ) : (
+        <Card flush>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                  {["Start (MVT)", "Event", "Type"].map((h) => (
+                    <th key={h} style={{ padding: "10px 20px", textAlign: "left", fontWeight: 700, fontSize: 11.5, color: "var(--ink-4)", letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-    </main>
+              </thead>
+              <tbody>
+                {feed.map((item) => (
+                  <tr key={item.id} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                    <td style={{ padding: "11px 20px", fontFamily: "monospace", fontSize: 12.5, color: "var(--ink-3)", whiteSpace: "nowrap" }}>
+                      {toMaldivesTime(item.startAt)}
+                    </td>
+                    <td style={{ padding: "11px 20px", fontWeight: 500, color: "var(--ink)" }}>
+                      {item.title}
+                    </td>
+                    <td style={{ padding: "11px 20px" }}>
+                      <Chip variant={KIND_CHIP[item.kind] ?? "default"} size="sm">
+                        {KIND_LABEL[item.kind] ?? item.kind}
+                      </Chip>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }

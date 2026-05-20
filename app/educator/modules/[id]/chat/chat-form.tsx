@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useEffect } from "react";
 import { sendChatMessageAction } from "@/lib/actions/chat-action";
+import { Send } from "lucide-react";
 
 type Props = {
   chatId: string;
@@ -18,21 +19,47 @@ export function ChatForm({ chatId, moduleOfferingId }: Props) {
   }, [pending, state]);
 
   return (
-    <form ref={ref} action={action} className="flex gap-2">
+    <form ref={ref} action={action} style={{ display: "flex", gap: 8 }}>
       <input type="hidden" name="chatId" value={chatId} />
       <input type="hidden" name="moduleOfferingId" value={moduleOfferingId} />
-      {state?.error && <p className="text-sm text-red-600 mb-1">{state.error}</p>}
+      {state?.error && (
+        <p style={{ fontSize: 12.5, color: "var(--bad)", marginBottom: 4 }}>{state.error}</p>
+      )}
       <input
         name="body"
         placeholder="Type a message… use @identifier to mention"
         required
-        className="flex-1 rounded border px-3 py-2 text-sm"
+        style={{
+          flex: 1,
+          borderRadius: 10,
+          border: "1px solid var(--line)",
+          background: "var(--surface)",
+          color: "var(--ink)",
+          fontSize: 13.5,
+          padding: "9px 12px",
+          outline: "none",
+        }}
       />
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "9px 16px",
+          borderRadius: 10,
+          background: "var(--primary-strong)",
+          color: "#fff",
+          fontSize: 13.5,
+          fontWeight: 700,
+          border: "none",
+          cursor: pending ? "default" : "pointer",
+          opacity: pending ? 0.6 : 1,
+          flexShrink: 0,
+        }}
       >
+        <Send size={14} />
         {pending ? "Sending…" : "Send"}
       </button>
     </form>

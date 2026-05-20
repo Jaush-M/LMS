@@ -1,6 +1,7 @@
 import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { CreateCourseOfferingForm } from "./create-form";
 
 export default async function NewCourseOfferingPage() {
@@ -38,12 +39,16 @@ export default async function NewCourseOfferingPage() {
   ]);
 
   return (
-    <main className="p-8">
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-semibold">Create Course Offering</h1>
-        <Link href="/admin/course-offerings" className="text-sm text-blue-600 underline">
-          Back to Course Offerings
-        </Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Link href="/admin/course-offerings" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--ink-3)", textDecoration: "none", width: "fit-content" }} className="module-back-link">
+        <ChevronLeft size={15} />
+        Course Offerings
+      </Link>
+
+      <div>
+        <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+          Create Course Offering
+        </h1>
       </div>
 
       <CreateCourseOfferingForm
@@ -56,6 +61,6 @@ export default async function NewCourseOfferingPage() {
         intakes={intakes}
         studyModes={studyModes}
       />
-    </main>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { EditIntakeForm } from "./edit-intake-form";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 
 export default async function EditIntakePage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuthPage({ minRole: "ADMINISTRATOR" });
@@ -12,12 +13,15 @@ export default async function EditIntakePage({ params }: { params: Promise<{ id:
   if (!intake) notFound();
 
   return (
-    <main className="p-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/catalogue/intakes" className="text-sm text-gray-500 hover:underline">← Intakes</Link>
-        <h1 className="text-2xl font-semibold">Edit Intake</h1>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Link href="/admin/catalogue/intakes" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--ink-3)", textDecoration: "none", width: "fit-content" }} className="module-back-link">
+        <ChevronLeft size={15} />
+        Intakes
+      </Link>
+      <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Edit Intake</h1>
+      <div style={{ maxWidth: 400 }}>
+        <EditIntakeForm id={intake.id} defaultName={intake.name} />
       </div>
-      <EditIntakeForm id={intake.id} defaultName={intake.name} />
-    </main>
+    </div>
   );
 }

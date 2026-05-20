@@ -2,11 +2,13 @@ import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft, BookOpen } from "lucide-react";
 import { ContentActionsForm } from "./content-actions-form";
+import { Chip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty";
 
 export default async function EducatorContentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-
   const { account } = await requireAuthPage({ roles: ["EDUCATOR"] });
 
   const mo = await prisma.moduleOffering.findUnique({
@@ -18,58 +20,69 @@ export default async function EducatorContentPage({ params }: { params: Promise<
   const sections = await prisma.contentSection.findMany({
     where: { moduleOfferingId: id },
     orderBy: { sortOrder: "asc" },
-    include: {
-      contentItems: { orderBy: { sortOrder: "asc" } },
-    },
+    include: { contentItems: { orderBy: { sortOrder: "asc" } } },
   });
 
   return (
-    <main className="p-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Content — {mo.templateModule.module.name}</h1>
-        <Link href={`/educator/modules/${id}`} className="text-sm text-blue-600 underline">Back to module</Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Link href={`/educator/modules/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--ink-3)", textDecoration: "none", width: "fit-content" }} className="module-back-link">
+        <ChevronLeft size={15} />
+        {mo.templateModule.module.name}
+      </Link>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+            Content
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>{mo.templateModule.module.name}</p>
+        </div>
+        <ContentActionsForm moduleOfferingId={id} />
       </div>
 
-      {/* Add section form */}
-      <ContentActionsForm moduleOfferingId={id} />
-
-      {/* Sections */}
       {sections.length === 0 ? (
-        <p className="mt-6 text-sm text-gray-500">No content sections yet.</p>
+        <EmptyState title="No content yet" body="Add your first section using the form above." />
       ) : (
-        <div className="mt-6 space-y-5">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {sections.map((section) => (
-            <div key={section.id} className="rounded border border-gray-200 bg-white">
-              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="font-medium text-gray-800">{section.title}</h2>
+            <div key={section.id} style={{ borderRadius: 14, border: "1px solid var(--line)", background: "var(--surface)", overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 18px", borderBottom: "1px solid var(--line-2)", background: "var(--surface-2)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <BookOpen size={14} style={{ color: "var(--primary-strong)", flexShrink: 0 }} />
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{section.title}</span>
+                  <Chip variant="default" size="sm">{section.contentItems.length} item{section.contentItems.length !== 1 ? "s" : ""}</Chip>
+                </div>
                 <ContentActionsForm moduleOfferingId={id} sectionId={section.id} addItem />
               </div>
+
               {section.contentItems.length === 0 ? (
-                <p className="px-5 py-3 text-sm text-gray-400">No content items yet.</p>
+                <div style={{ padding: "14px 18px" }}>
+                  <p style={{ fontSize: 12.5, color: "var(--ink-4)", fontStyle: "italic" }}>No items in this section yet.</p>
+                </div>
               ) : (
-                <ul className="divide-y divide-gray-100">
+                <div style={{ display: "flex", flexDirection: "column" }}>
                   {section.contentItems.map((item) => (
-                    <li key={item.id} className="px-5 py-3 flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{item.title}</p>
-                        <span className={`text-xs font-medium ${item.status === "PUBLISHED" ? "text-green-600" : "text-gray-400"}`}>
-                          {item.status}
-                        </span>
+                    <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "11px 18px", borderBottom: "1px solid var(--line-2)" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{item.title}</p>
                       </div>
-                      <ContentActionsForm
-                        moduleOfferingId={id}
-                        contentItemId={item.id}
-                        isPublished={item.status === "PUBLISHED"}
-                        togglePublish
-                      />
-                    </li>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                        <Chip variant={item.status === "PUBLISHED" ? "ok" : "default"} size="sm">{item.status}</Chip>
+                        <ContentActionsForm
+                          moduleOfferingId={id}
+                          contentItemId={item.id}
+                          isPublished={item.status === "PUBLISHED"}
+                          togglePublish
+                        />
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

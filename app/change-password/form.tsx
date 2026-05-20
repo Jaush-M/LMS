@@ -6,15 +6,35 @@ import { changePasswordAction } from "@/lib/actions/change-password-action";
 export function ChangePasswordForm() {
   const [state, action, pending] = useActionState(changePasswordAction, null);
 
+  const inputStyle = {
+    width: "100%",
+    borderRadius: 12,
+    border: "1px solid var(--line)",
+    background: "var(--surface)",
+    color: "var(--ink)",
+    fontSize: 14,
+    padding: "11px 14px",
+    outline: "none",
+  } as React.CSSProperties;
+
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {state?.error && (
-        <div role="alert" className="rounded bg-red-50 p-3 text-sm text-red-700">
+        <div
+          role="alert"
+          className="flex items-center gap-2 px-3.5 py-3 rounded-xl text-sm font-medium"
+          style={{ background: "var(--bad-soft)", color: "var(--bad)" }}
+        >
           {state.error}
         </div>
       )}
-      <div className="space-y-1">
-        <label htmlFor="newPassword" className="block text-sm font-medium">
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label
+          htmlFor="newPassword"
+          className="text-[12.5px] font-semibold"
+          style={{ color: "var(--ink-2)" }}
+        >
           New password
         </label>
         <input
@@ -24,11 +44,25 @@ export function ChangePasswordForm() {
           required
           minLength={8}
           autoComplete="new-password"
-          className="w-full rounded border px-3 py-2 text-sm"
+          placeholder="At least 8 characters"
+          style={inputStyle}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "var(--primary-strong)";
+            e.currentTarget.style.boxShadow = "0 0 0 4px var(--primary-softer)";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "var(--line)";
+            e.currentTarget.style.boxShadow = "none";
+          }}
         />
       </div>
-      <div className="space-y-1">
-        <label htmlFor="confirmPassword" className="block text-sm font-medium">
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label
+          htmlFor="confirmPassword"
+          className="text-[12.5px] font-semibold"
+          style={{ color: "var(--ink-2)" }}
+        >
           Confirm password
         </label>
         <input
@@ -37,15 +71,30 @@ export function ChangePasswordForm() {
           type="password"
           required
           autoComplete="new-password"
-          className="w-full rounded border px-3 py-2 text-sm"
+          placeholder="Repeat your new password"
+          style={inputStyle}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "var(--primary-strong)";
+            e.currentTarget.style.boxShadow = "0 0 0 4px var(--primary-softer)";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "var(--line)";
+            e.currentTarget.style.boxShadow = "none";
+          }}
         />
       </div>
+
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="mt-1 py-3 rounded-xl font-bold text-sm text-white transition-colors disabled:opacity-60"
+        style={{
+          background: pending ? "var(--primary-deep)" : "var(--primary-strong)",
+          boxShadow: "0 8px 16px -8px oklch(0.5 0.15 162 / 0.45)",
+          fontSize: 14,
+        }}
       >
-        {pending ? "Changing…" : "Change password"}
+        {pending ? "Saving…" : "Set new password"}
       </button>
     </form>
   );

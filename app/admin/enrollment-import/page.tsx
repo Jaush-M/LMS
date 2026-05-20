@@ -1,6 +1,5 @@
 import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
 import { EnrollmentImportForm } from "./form";
 
 export default async function EnrollmentImportPage() {
@@ -17,21 +16,25 @@ export default async function EnrollmentImportPage() {
   });
 
   return (
-    <main className="p-8">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Enrollment Import</h1>
-        <Link href="/admin/dashboard" className="text-sm text-blue-600 underline">
-          Dashboard
-        </Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div>
+        <h1
+          className="text-[22px] font-extrabold tracking-[-0.03em]"
+          style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
+        >
+          Enrollment Import
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>
+          Upload a CSV to enroll students into a course offering
+        </p>
       </div>
-      <div className="mt-6">
-        <EnrollmentImportForm
-          courseOfferings={courseOfferings.map((courseOffering) => ({
-            id: courseOffering.id,
-            label: `${courseOffering.name} - ${courseOffering.course.code} ${courseOffering.course.name} - ${courseOffering.intake.name}`,
-          }))}
-        />
-      </div>
-    </main>
+
+      <EnrollmentImportForm
+        courseOfferings={courseOfferings.map((courseOffering) => ({
+          id: courseOffering.id,
+          label: `${courseOffering.name} — ${courseOffering.course.code} ${courseOffering.course.name} — ${courseOffering.intake.name}`,
+        }))}
+      />
+    </div>
   );
 }

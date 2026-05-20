@@ -6,6 +6,9 @@ import {
   previewEnrollmentCsvImportAction,
   type EnrollmentImportState,
 } from "@/lib/actions/enrollment-import-action";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Banner } from "@/components/ui/banner";
 
 type CourseOfferingOption = {
   id: string;
@@ -16,13 +19,47 @@ type EnrollmentImportFormProps = {
   courseOfferings: CourseOfferingOption[];
 };
 
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  borderRadius: 10,
+  border: "1px solid var(--line)",
+  background: "var(--surface)",
+  color: "var(--ink)",
+  fontSize: 13.5,
+  padding: "9px 12px",
+  outline: "none",
+  fontFamily: "inherit",
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: "var(--ink-2)",
+  marginBottom: 5,
+};
+
+const thStyle: React.CSSProperties = {
+  padding: "9px 16px",
+  textAlign: "left" as const,
+  fontWeight: 700,
+  fontSize: 11,
+  color: "var(--ink-4)",
+  letterSpacing: "0.05em",
+  textTransform: "uppercase" as const,
+  whiteSpace: "nowrap" as const,
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "10px 16px",
+  fontSize: 13,
+  color: "var(--ink)",
+  borderBottom: "1px solid var(--line-2)",
+};
+
 function StatusMessage({ state }: { state: EnrollmentImportState }) {
   if (!state?.error) return null;
-  return (
-    <div role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-      {state.error}
-    </div>
-  );
+  return <Banner variant="bad">{state.error}</Banner>;
 }
 
 export function EnrollmentImportForm({ courseOfferings }: EnrollmentImportFormProps) {
@@ -38,181 +75,222 @@ export function EnrollmentImportForm({ courseOfferings }: EnrollmentImportFormPr
   const result = commitState?.result;
 
   return (
-    <div className="space-y-8">
-      <form action={previewAction} className="max-w-2xl space-y-4 rounded border p-4">
-        <StatusMessage state={previewState} />
-        <div className="space-y-1">
-          <label htmlFor="courseOfferingId" className="block text-sm font-medium">
-            Course Offering
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <Card>
+        <form action={previewAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <StatusMessage state={previewState} />
+
+          <div>
+            <label htmlFor="courseOfferingId" style={labelStyle}>Course Offering</label>
+            <select
+              id="courseOfferingId"
+              name="courseOfferingId"
+              required
+              defaultValue={preview?.courseOfferingId ?? ""}
+              style={inputStyle}
+            >
+              <option value="">Select a Course Offering…</option>
+              {courseOfferings.map((co) => (
+                <option key={co.id} value={co.id}>{co.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="csvFile" style={labelStyle}>CSV file</label>
+            <input
+              id="csvFile"
+              name="csvFile"
+              type="file"
+              accept=".csv,text/csv"
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="csvText" style={labelStyle}>Or paste CSV text</label>
+            <textarea
+              id="csvText"
+              name="csvText"
+              rows={5}
+              style={{ ...inputStyle, fontFamily: "monospace", resize: "vertical" }}
+              defaultValue={preview?.csvText ?? ""}
+            />
+          </div>
+
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--ink-2)", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              name="createMissingAccounts"
+              defaultChecked={preview?.createMissingAccounts ?? false}
+              style={{ accentColor: "var(--primary-strong)", width: 14, height: 14 }}
+            />
+            Create missing Student accounts automatically
           </label>
-          <select
-            id="courseOfferingId"
-            name="courseOfferingId"
-            required
-            className="w-full rounded border px-3 py-2 text-sm"
-            defaultValue={preview?.courseOfferingId ?? ""}
-          >
-            <option value="">Select a Course Offering</option>
-            {courseOfferings.map((courseOffering) => (
-              <option key={courseOffering.id} value={courseOffering.id}>
-                {courseOffering.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="csvFile" className="block text-sm font-medium">
-            CSV file
-          </label>
-          <input
-            id="csvFile"
-            name="csvFile"
-            type="file"
-            accept=".csv,text/csv"
-            className="w-full rounded border px-3 py-2 text-sm"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="csvText" className="block text-sm font-medium">
-            CSV text
-          </label>
-          <textarea
-            id="csvText"
-            name="csvText"
-            rows={6}
-            className="w-full rounded border px-3 py-2 font-mono text-sm"
-            defaultValue={preview?.csvText ?? ""}
-          />
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            name="createMissingAccounts"
-            defaultChecked={preview?.createMissingAccounts ?? false}
-            className="h-4 w-4 rounded border"
-          />
-          Create missing Student accounts
-        </label>
-        <button
-          type="submit"
-          disabled={previewPending}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {previewPending ? "Previewing..." : "Preview enrollment CSV"}
-        </button>
-      </form>
+
+          <div>
+            <button
+              type="submit"
+              disabled={previewPending}
+              style={{
+                padding: "9px 20px",
+                borderRadius: 10,
+                background: previewPending ? "var(--primary-deep)" : "var(--primary-strong)",
+                color: "#fff",
+                fontSize: 13.5,
+                fontWeight: 700,
+                border: "none",
+                cursor: previewPending ? "default" : "pointer",
+                opacity: previewPending ? 0.7 : 1,
+              }}
+            >
+              {previewPending ? "Previewing…" : "Preview enrollment CSV"}
+            </button>
+          </div>
+        </form>
+      </Card>
 
       {preview && (
-        <section className="space-y-4">
-          <div className="flex flex-wrap gap-3 text-sm">
-            <span className="rounded border px-3 py-1">Rows: {preview.totalRows}</span>
-            <span className="rounded border px-3 py-1">Valid: {preview.validRows.length}</span>
-            <span className="rounded border px-3 py-1">Invalid: {preview.invalidRows.length}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Summary chips */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Chip variant="default">Rows: {preview.totalRows}</Chip>
+            <Chip variant="ok">Valid: {preview.validRows.length}</Chip>
+            {preview.invalidRows.length > 0 && (
+              <Chip variant="bad">Invalid: {preview.invalidRows.length}</Chip>
+            )}
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="py-2 pr-4 font-medium">Row</th>
-                  <th className="py-2 pr-4 font-medium">Student Identifier</th>
-                  <th className="py-2 pr-4 font-medium">Institutional Email</th>
-                  <th className="py-2 pr-4 font-medium">Name</th>
-                  <th className="py-2 pr-4 font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.validRows.map((row) => (
-                  <tr key={row.rowNumber} className="border-b">
-                    <td className="py-2 pr-4">{row.rowNumber}</td>
-                    <td className="py-2 pr-4 font-mono">{row.studentIdentifier ?? "-"}</td>
-                    <td className="py-2 pr-4 font-mono">{row.institutionalEmail ?? "-"}</td>
-                    <td className="py-2 pr-4">{row.name || "-"}</td>
-                    <td className="py-2 pr-4">
-                      {row.action === "match_existing" ? "Match existing" : "Create account"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {preview.invalidRows.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="py-2 pr-4 font-medium">Row</th>
-                    <th className="py-2 pr-4 font-medium">Student Identifier</th>
-                    <th className="py-2 pr-4 font-medium">Institutional Email</th>
-                    <th className="py-2 pr-4 font-medium">Errors</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.invalidRows.map((row) => (
-                    <tr key={row.rowNumber} className="border-b">
-                      <td className="py-2 pr-4">{row.rowNumber}</td>
-                      <td className="py-2 pr-4 font-mono">{row.studentIdentifier ?? "-"}</td>
-                      <td className="py-2 pr-4 font-mono">{row.institutionalEmail ?? "-"}</td>
-                      <td className="py-2 pr-4 text-red-700">{row.errors.join("; ")}</td>
+          {/* Valid rows */}
+          {preview.validRows.length > 0 && (
+            <Card flush>
+              <div style={{ padding: "12px 16px 8px", fontWeight: 700, fontSize: 13, color: "var(--ink-2)" }}>
+                Valid rows ({preview.validRows.length})
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                      {["Row", "Student Identifier", "Email", "Name", "Action"].map((h) => (
+                        <th key={h} style={thStyle}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {preview.validRows.map((row) => (
+                      <tr key={row.rowNumber}>
+                        <td style={tdStyle}>{row.rowNumber}</td>
+                        <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 12 }}>{row.studentIdentifier ?? "—"}</td>
+                        <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 12 }}>{row.institutionalEmail ?? "—"}</td>
+                        <td style={tdStyle}>{row.name || "—"}</td>
+                        <td style={tdStyle}>
+                          <Chip variant={row.action === "match_existing" ? "sky" : "lav"} size="sm">
+                            {row.action === "match_existing" ? "Match existing" : "Create account"}
+                          </Chip>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
 
-          <form action={commitAction} className="space-y-3">
+          {/* Invalid rows */}
+          {preview.invalidRows.length > 0 && (
+            <Card flush>
+              <div style={{ padding: "12px 16px 8px", fontWeight: 700, fontSize: 13, color: "var(--bad)" }}>
+                Invalid rows ({preview.invalidRows.length})
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                      {["Row", "Student Identifier", "Email", "Errors"].map((h) => (
+                        <th key={h} style={thStyle}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.invalidRows.map((row) => (
+                      <tr key={row.rowNumber}>
+                        <td style={tdStyle}>{row.rowNumber}</td>
+                        <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 12 }}>{row.studentIdentifier ?? "—"}</td>
+                        <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 12 }}>{row.institutionalEmail ?? "—"}</td>
+                        <td style={{ ...tdStyle, color: "var(--bad)" }}>{row.errors.join("; ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
+          {/* Commit form */}
+          <form action={commitAction} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <StatusMessage state={commitState} />
             <input type="hidden" name="courseOfferingId" value={preview.courseOfferingId} />
             <input type="hidden" name="csvText" value={preview.csvText} />
             <input type="hidden" name="createMissingAccounts" value={String(preview.createMissingAccounts)} />
-            <button
-              type="submit"
-              disabled={commitPending || preview.validRows.length === 0}
-              className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
-            >
-              {commitPending ? "Committing..." : "Commit valid enrollment rows"}
-            </button>
+            <div>
+              <button
+                type="submit"
+                disabled={commitPending || preview.validRows.length === 0}
+                style={{
+                  padding: "9px 20px",
+                  borderRadius: 10,
+                  background: "var(--ok)",
+                  color: "#fff",
+                  fontSize: 13.5,
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: (commitPending || preview.validRows.length === 0) ? "default" : "pointer",
+                  opacity: (commitPending || preview.validRows.length === 0) ? 0.5 : 1,
+                }}
+              >
+                {commitPending ? "Committing…" : `Commit ${preview.validRows.length} valid row${preview.validRows.length !== 1 ? "s" : ""}`}
+              </button>
+            </div>
           </form>
-        </section>
+        </div>
       )}
 
       {result && (
-        <section className="space-y-4">
-          <div className="flex flex-wrap gap-3 text-sm">
-            <span className="rounded border px-3 py-1">Enrolled: {result.enrolledRows.length}</span>
-            <span className="rounded border px-3 py-1">Skipped: {result.skippedRows.length}</span>
-            <span className="rounded border px-3 py-1">Accounts created: {result.createdAccounts.length}</span>
+        <Card>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            <Chip variant="ok">Enrolled: {result.enrolledRows.length}</Chip>
+            <Chip variant="default">Skipped: {result.skippedRows.length}</Chip>
+            {result.createdAccounts.length > 0 && (
+              <Chip variant="lav">Accounts created: {result.createdAccounts.length}</Chip>
+            )}
           </div>
 
           {result.createdAccounts.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-sm">
+            <div style={{ overflowX: "auto" }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink-2)", marginBottom: 8 }}>New accounts</div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr className="border-b text-left">
-                    <th className="py-2 pr-4 font-medium">Row</th>
-                    <th className="py-2 pr-4 font-medium">Name</th>
-                    <th className="py-2 pr-4 font-medium">Identifier</th>
-                    <th className="py-2 pr-4 font-medium">Institutional Email</th>
-                    <th className="py-2 pr-4 font-medium">Temporary Password</th>
+                  <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                    {["Row", "Name", "Identifier", "Email", "Temp Password"].map((h) => (
+                      <th key={h} style={thStyle}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {result.createdAccounts.map((account) => (
-                    <tr key={account.userAccountId} className="border-b">
-                      <td className="py-2 pr-4">{account.rowNumber}</td>
-                      <td className="py-2 pr-4">{account.name}</td>
-                      <td className="py-2 pr-4 font-mono">{account.identifier}</td>
-                      <td className="py-2 pr-4 font-mono">{account.institutionalEmail}</td>
-                      <td className="py-2 pr-4 font-mono">{account.temporaryPassword}</td>
+                    <tr key={account.userAccountId}>
+                      <td style={tdStyle}>{account.rowNumber}</td>
+                      <td style={tdStyle}>{account.name}</td>
+                      <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 12 }}>{account.identifier}</td>
+                      <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 12 }}>{account.institutionalEmail}</td>
+                      <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 12, color: "var(--primary-deep)", fontWeight: 700 }}>{account.temporaryPassword}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </section>
+        </Card>
       )}
     </div>
   );

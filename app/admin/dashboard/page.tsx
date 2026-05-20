@@ -1,118 +1,289 @@
 import { requireAuthPage } from "@/lib/auth-guard";
 import Link from "next/link";
+import {
+  GraduationCap, Users, Layers, AlertTriangle, ArrowRight, Calendar,
+} from "lucide-react";
 import { getAdministratorDashboard } from "@/lib/administrator-dashboard";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { StatCard, StatIcon } from "@/components/ui/stat";
+import { EmptyState } from "@/components/ui/empty";
+import { Banner } from "@/components/ui/banner";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 export default async function AdminDashboardPage() {
   const { user, account } = await requireAuthPage({ minRole: "ADMINISTRATOR" });
   const isSuperAdmin = account.role === "SUPER_ADMINISTRATOR";
   const data = await getAdministratorDashboard();
 
+  const totalEnrolled = data.activeCourseOfferings.reduce((sum, co) => sum + co.enrolmentCount, 0);
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          {isSuperAdmin ? "Super Administrator Dashboard" : "Administrator Dashboard"}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">Welcome, {user.name}</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Alerts */}
+      {data.moduleOfferingsWithoutActiveEducator.length > 0 && (
+        <Banner variant="warn" icon={<AlertTriangle size={16} />}>
+          {data.moduleOfferingsWithoutActiveEducator.length} module offering{data.moduleOfferingsWithoutActiveEducator.length > 1 ? "s" : ""} without an active educator — action required.
+        </Banner>
+      )}
 
-        <nav className="mt-3 flex flex-wrap gap-4 text-sm text-blue-600">
-          <Link href="/admin/create-account" className="underline">Create account</Link>
-          <Link href="/admin/accounts" className="underline">Manage accounts</Link>
-          <Link href="/admin/enrollment-import" className="underline">Enrollment import</Link>
-          <Link href="/admin/catalogue" className="underline">Academic catalogue</Link>
-          <Link href="/admin/academic-calendar" className="underline">Academic Calendar</Link>
-          {isSuperAdmin && (
-            <>
-              <Link href="/admin/create-administrator" className="underline">Create administrator</Link>
-              <Link href="/admin/system-settings" className="underline">System settings</Link>
-            </>
-          )}
-        </nav>
+      {/* KPI row */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 16,
+        }}
+      >
+        <StatCard
+          label="Active offerings"
+          value={data.activeCourseOfferings.length}
+          delta="Semester 2025/26"
+          icon={<StatIcon tone="peach"><Layers size={22} /></StatIcon>}
+        />
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2">
+        <StatCard
+          label="Total enrolled"
+          value={totalEnrolled}
+          delta="Active enrollments"
+          icon={<StatIcon tone="mint"><GraduationCap size={22} /></StatIcon>}
+        />
 
-          {/* Active Course Offerings */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="font-semibold text-gray-800">
-              Active Course Offerings
-              {data.attendanceCompletionPercent !== null && (
-                <span className="ml-2 text-xs font-normal text-gray-500">
-                  Attendance completion: {data.attendanceCompletionPercent}%
-                </span>
-              )}
-            </h2>
+        <StatCard
+          label="Attendance completion"
+          value={data.attendanceCompletionPercent !== null ? `${data.attendanceCompletionPercent}%` : "—"}
+          delta="Sessions with records submitted"
+          icon={<StatIcon tone="sky"><Users size={22} /></StatIcon>}
+        />
+
+        <StatCard
+          label="Needs attention"
+          value={data.moduleOfferingsWithoutActiveEducator.length}
+          delta="Module offerings flagged"
+          icon={<StatIcon tone="rose"><AlertTriangle size={22} /></StatIcon>}
+        />
+      </section>
+
+      {/* Main / side layout */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 320px",
+          gap: 20,
+          alignItems: "start",
+        }}
+      >
+        {/* Left: course offerings table */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <Card flush>
+            <CardHeader padded>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                <CardTitle count={data.activeCourseOfferings.length}>Active Course Offerings</CardTitle>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Link
+                    href="/admin/course-offerings"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "6px 12px",
+                      borderRadius: 9,
+                      border: "1px solid var(--line)",
+                      background: "var(--surface)",
+                      color: "var(--ink-2)",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      textDecoration: "none",
+                    }}
+                  >
+                    Open setup <ArrowRight size={12} />
+                  </Link>
+                </div>
+              </div>
+            </CardHeader>
             {data.activeCourseOfferings.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-400">No active course offerings.</p>
+              <div style={{ padding: "0 20px 20px" }}>
+                <EmptyState title="No active offerings" body="Create a course offering to get started." />
+              </div>
             ) : (
-              <ul className="mt-3 divide-y divide-gray-100">
-                {data.activeCourseOfferings.map((co) => (
-                  <li key={co.id} className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{co.name}</p>
-                      <p className="text-xs text-gray-500">{co.courseName}</p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                      {co.enrolmentCount} enrolled
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div style={{ overflowX: "auto" }}>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: 13,
+                  }}
+                >
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                      {["Offering", "Course", "Enrolled", "Period"].map((h) => (
+                        <th
+                          key={h}
+                          style={{
+                            padding: "10px 20px",
+                            textAlign: "left",
+                            fontWeight: 700,
+                            fontSize: 11.5,
+                            color: "var(--ink-4)",
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.activeCourseOfferings.map((co) => (
+                      <tr
+                        key={co.id}
+                        style={{ borderBottom: "1px solid var(--line-2)" }}
+                      >
+                        <td style={{ padding: "12px 20px", fontWeight: 600, color: "var(--ink)" }}>
+                          {co.name}
+                        </td>
+                        <td style={{ padding: "12px 20px", color: "var(--ink-3)", fontSize: 12.5 }}>
+                          {co.courseName}
+                        </td>
+                        <td style={{ padding: "12px 20px" }}>
+                          <Chip variant="lav">{co.enrolmentCount} enrolled</Chip>
+                        </td>
+                        <td style={{ padding: "12px 20px", color: "var(--ink-3)", fontSize: 12, whiteSpace: "nowrap" }}>
+                          {co.startAt.toLocaleDateString("en", { month: "short", year: "numeric" })}
+                          {" – "}
+                          {co.finishAt.toLocaleDateString("en", { month: "short", year: "numeric" })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </section>
+          </Card>
 
-          {/* Upcoming Events */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="font-semibold text-gray-800">Upcoming Events</h2>
-            {data.upcomingEvents.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-400">No upcoming events.</p>
-            ) : (
-              <ul className="mt-3 divide-y divide-gray-100">
-                {data.upcomingEvents.map((e) => (
-                  <li key={e.id} className="flex items-start justify-between gap-2 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{e.title}</p>
-                      <p className="text-xs text-gray-500">
-                        {e.kind === "INSTITUTION" ? "Institution-wide" : e.courseOfferingName}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-xs text-gray-500">
-                      {e.startAt.toLocaleDateString("en-MV", { day: "numeric", month: "short" })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {/* Module Offerings Without Active Educator */}
+          {/* Module offerings without active educator */}
           {data.moduleOfferingsWithoutActiveEducator.length > 0 && (
-            <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm sm:col-span-2">
-              <h2 className="font-semibold text-amber-800">
-                Module Offerings Needing an Active Educator
-                <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                  {data.moduleOfferingsWithoutActiveEducator.length}
-                </span>
-              </h2>
-              <ul className="mt-3 divide-y divide-amber-100">
+            <Card>
+              <CardHeader>
+                <CardTitle count={data.moduleOfferingsWithoutActiveEducator.length}>
+                  Module offerings needing an active educator
+                </CardTitle>
+              </CardHeader>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {data.moduleOfferingsWithoutActiveEducator.map((mo) => (
-                  <li key={mo.id} className="py-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-amber-900">{mo.moduleName}</p>
-                        <p className="text-xs text-amber-700">{mo.courseOfferingName}</p>
-                      </div>
-                      <span className="shrink-0 text-xs text-amber-600">
-                        {mo.primaryEducatorName}
-                      </span>
+                  <div
+                    key={mo.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "10px 12px",
+                      borderRadius: 12,
+                      background: "var(--warn-soft)",
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)" }}>{mo.moduleName}</div>
+                      <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>{mo.courseOfferingName}</div>
                     </div>
-                  </li>
+                    <div style={{ fontSize: 12, color: "var(--warn)", fontWeight: 600, flexShrink: 0 }}>
+                      {mo.primaryEducatorName}
+                    </div>
+                    <Chip variant="warn">Inactive educator</Chip>
+                  </div>
                 ))}
-              </ul>
-            </section>
+              </div>
+            </Card>
           )}
+        </div>
 
+        {/* Right rail: upcoming events + quick links */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Upcoming events */}
+          <Card tight>
+            <CardHeader>
+              <CardTitle count={data.upcomingEvents.length}>Upcoming events</CardTitle>
+            </CardHeader>
+            {data.upcomingEvents.length === 0 ? (
+              <EmptyState title="No upcoming events" body="Create events in the academic calendar." />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {data.upcomingEvents.slice(0, 8).map((e) => (
+                  <div
+                    key={e.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      background: "var(--surface-2)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 9,
+                        display: "grid",
+                        placeItems: "center",
+                        background: e.kind === "INSTITUTION" ? "var(--primary-soft)" : "var(--lav)",
+                        color: e.kind === "INSTITUTION" ? "var(--primary-deep)" : "var(--lav-ink)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Calendar size={14} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 12.5, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {e.title}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 1 }}>
+                        {e.kind === "INSTITUTION" ? "Institution-wide" : e.courseOfferingName}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 600, flexShrink: 0, textAlign: "right" }}>
+                      {e.startAt.toLocaleDateString("en", { day: "numeric", month: "short" })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Quick links */}
+          <Card tight>
+            <CardHeader>
+              <CardTitle>Quick links</CardTitle>
+            </CardHeader>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {[
+                { href: "/admin/accounts", label: "Manage accounts" },
+                { href: "/admin/enrollment-import", label: "Enrollment import" },
+                { href: "/admin/catalogue", label: "Academic catalogue" },
+                { href: "/admin/academic-calendar", label: "Academic calendar" },
+                ...(isSuperAdmin
+                  ? [
+                      { href: "/admin/create-administrator", label: "Create administrator" },
+                      { href: "/admin/system-settings", label: "System settings" },
+                    ]
+                  : []),
+              ].map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="quick-link"
+                >
+                  {link.label}
+                  <ArrowRight size={13} style={{ color: "var(--ink-4)" }} />
+                </Link>
+              ))}
+            </div>
+          </Card>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

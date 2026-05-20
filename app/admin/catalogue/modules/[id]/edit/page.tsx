@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { EditModuleForm } from "./edit-module-form";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 
 export default async function EditModulePage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuthPage({ minRole: "ADMINISTRATOR" });
@@ -12,13 +13,18 @@ export default async function EditModulePage({ params }: { params: Promise<{ id:
   if (!mod) notFound();
 
   return (
-    <main className="p-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/catalogue/modules" className="text-sm text-gray-500 hover:underline">← Modules</Link>
-        <h1 className="text-2xl font-semibold">Edit Module</h1>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Link href="/admin/catalogue/modules" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--ink-3)", textDecoration: "none", width: "fit-content" }} className="module-back-link">
+        <ChevronLeft size={15} />
+        Modules
+      </Link>
+      <div>
+        <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Edit Module</h1>
+        <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>Code: <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{mod.code}</span></p>
       </div>
-      <p className="text-sm text-gray-500">Code: <span className="font-mono font-medium">{mod.code}</span></p>
-      <EditModuleForm id={mod.id} defaultName={mod.name} defaultDescription={mod.description} />
-    </main>
+      <div style={{ maxWidth: 520 }}>
+        <EditModuleForm id={mod.id} defaultName={mod.name} defaultDescription={mod.description} />
+      </div>
+    </div>
   );
 }

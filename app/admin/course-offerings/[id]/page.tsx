@@ -2,10 +2,13 @@ import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft, Users, ArrowRight } from "lucide-react";
+import { Chip } from "@/components/ui/chip";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { EmptyState } from "@/components/ui/empty";
 
 export default async function CourseOfferingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-
   await requireAuthPage({ minRole: "ADMINISTRATOR" });
 
   const offering = await prisma.courseOffering.findUnique({
@@ -31,83 +34,113 @@ export default async function CourseOfferingDetailPage({ params }: { params: Pro
       },
     },
   });
-
   if (!offering) notFound();
 
   const enrolledCount = offering.enrollments.length;
+  const fillPct = Math.round((enrolledCount / offering.capacity) * 100);
   const atCapacity = enrolledCount >= offering.capacity;
 
   return (
-    <main className="p-8 space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">{offering.name}</h1>
-        <Link href="/admin/course-offerings" className="text-sm text-blue-600 underline">
-          Back to Course Offerings
-        </Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <Link href="/admin/course-offerings" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: "var(--ink-3)", textDecoration: "none", width: "fit-content" }} className="module-back-link">
+        <ChevronLeft size={15} />
+        Course Offerings
+      </Link>
+
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <h1 className="text-[22px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+            {offering.name}
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>
+            {offering.course.code} — {offering.course.name}
+          </p>
+        </div>
+        <Chip variant={offering.status === "ARCHIVED" ? "default" : "ok"} size="sm">{offering.status}</Chip>
       </div>
 
-      <section className="grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <span className="font-medium">Course:</span>{" "}
-          {offering.course.code} — {offering.course.name}
+      {/* Info grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        {[
+          { label: "Intake", value: offering.intake.name },
+          { label: "Study Mode", value: offering.studyMode.name },
+          { label: "Dates", value: `${offering.startAt.toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })} – ${offering.finishAt.toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}` },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ borderRadius: 12, border: "1px solid var(--line)", background: "var(--surface)", padding: "14px 16px" }}>
+            <p style={{ fontSize: 11.5, color: "var(--ink-3)", fontWeight: 500, marginBottom: 4 }}>{label}</p>
+            <p style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Capacity */}
+      <div style={{ borderRadius: 12, border: "1px solid var(--line)", background: "var(--surface)", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-3)" }}>Enrollment Capacity</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{enrolledCount} / {offering.capacity}</span>
+            {atCapacity && <Chip variant="warn" size="sm">Full</Chip>}
+          </div>
         </div>
-        <div>
-          <span className="font-medium">Intake:</span> {offering.intake.name}
-        </div>
-        <div>
-          <span className="font-medium">Study mode:</span> {offering.studyMode.name}
-        </div>
-        <div>
-          <span className="font-medium">Dates:</span>{" "}
-          {offering.startAt.toLocaleDateString()} – {offering.finishAt.toLocaleDateString()}
-        </div>
-        <div>
-          <span className="font-medium">Capacity:</span> {enrolledCount} / {offering.capacity}
-          {atCapacity && (
-            <span className="ml-2 rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
-              Full
-            </span>
-          )}
-        </div>
-        <div>
-          <span className="font-medium">Status:</span>{" "}
-          <span className={`rounded px-2 py-0.5 text-xs font-medium ${offering.status === "ARCHIVED" ? "bg-gray-100 text-gray-600" : "bg-green-100 text-green-700"}`}>
-            {offering.status}
-          </span>
-        </div>
-      </section>
+        <ProgressBar value={fillPct} />
+      </div>
 
       {/* Module Offerings */}
-      <section>
-        <h2 className="text-lg font-semibold mb-3">Module Offerings</h2>
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b text-left">
-              <th className="py-2 pr-4 font-medium">Module</th>
-              <th className="py-2 pr-4 font-medium">Code</th>
-              <th className="py-2 font-medium">Primary Educator</th>
-            </tr>
-          </thead>
-          <tbody>
-            {offering.moduleOfferings.map((mo) => (
-              <tr key={mo.id} className="border-b">
-                <td className="py-2 pr-4">{mo.templateModule.module.name}</td>
-                <td className="py-2 pr-4 font-mono text-xs">{mo.templateModule.module.code}</td>
-                <td className="py-2">{mo.primaryEducator.user.name}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>Module Offerings</h2>
+          <Link href={`/admin/course-offerings/${id}/sessions`} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, color: "var(--primary-strong)", textDecoration: "none" }}>
+            View Sessions <ArrowRight size={12} />
+          </Link>
+        </div>
+        {offering.moduleOfferings.length === 0 ? (
+          <EmptyState title="No module offerings" body="No modules have been set up for this offering." />
+        ) : (
+          <div style={{ borderRadius: 14, border: "1px solid var(--line)", background: "var(--surface)", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--line-2)" }}>
+                  <th style={{ padding: "10px 18px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Module</th>
+                  <th style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Code</th>
+                  <th style={{ padding: "10px 18px 10px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Primary Educator</th>
+                </tr>
+              </thead>
+              <tbody>
+                {offering.moduleOfferings.map((mo) => (
+                  <tr key={mo.id} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                    <td style={{ padding: "10px 18px", fontWeight: 600, color: "var(--ink)" }}>{mo.templateModule.module.name}</td>
+                    <td style={{ padding: "10px 8px", fontFamily: "monospace", fontSize: 12, color: "var(--ink-3)" }}>{mo.templateModule.module.code}</td>
+                    <td style={{ padding: "10px 18px 10px 8px", color: "var(--ink-2)" }}>{mo.primaryEducator.user.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Enrolled Students */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Enrolled Students ({enrolledCount})</h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Users size={15} style={{ color: "var(--ink-3)" }} />
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>Enrolled Students ({enrolledCount})</h2>
+          </div>
           {offering.status !== "ARCHIVED" && (
             <Link
               href={`/admin/course-offerings/${id}/enroll`}
-              className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "7px 14px",
+                borderRadius: 9,
+                background: "var(--primary-strong)",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: "none",
+              }}
             >
               Enroll Student
             </Link>
@@ -115,30 +148,30 @@ export default async function CourseOfferingDetailPage({ params }: { params: Pro
         </div>
 
         {offering.enrollments.length === 0 ? (
-          <p className="text-sm text-gray-500">No students enrolled yet.</p>
+          <EmptyState title="No students enrolled" body="Use the Enroll Student button to add students." />
         ) : (
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium">Name</th>
-                <th className="py-2 pr-4 font-medium">Identifier</th>
-                <th className="py-2 font-medium">Override</th>
-              </tr>
-            </thead>
-            <tbody>
-              {offering.enrollments.map((e) => (
-                <tr key={e.id} className="border-b">
-                  <td className="py-2 pr-4">{e.student.user.name}</td>
-                  <td className="py-2 pr-4 font-mono text-xs">{e.student.generatedIdentifier}</td>
-                  <td className="py-2 text-xs text-gray-500">
-                    {e.capacityOverride ? e.capacityOverride.reason : "—"}
-                  </td>
+          <div style={{ borderRadius: 14, border: "1px solid var(--line)", background: "var(--surface)", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--line-2)" }}>
+                  <th style={{ padding: "10px 18px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Name</th>
+                  <th style={{ padding: "10px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Identifier</th>
+                  <th style={{ padding: "10px 18px 10px 8px", textAlign: "left", fontWeight: 600, color: "var(--ink-3)", fontSize: 12 }}>Override</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {offering.enrollments.map((e) => (
+                  <tr key={e.id} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                    <td style={{ padding: "10px 18px", fontWeight: 600, color: "var(--ink)" }}>{e.student.user.name}</td>
+                    <td style={{ padding: "10px 8px", fontFamily: "monospace", fontSize: 12, color: "var(--ink-3)" }}>{e.student.generatedIdentifier}</td>
+                    <td style={{ padding: "10px 18px 10px 8px", fontSize: 12, color: "var(--ink-3)" }}>{e.capacityOverride ? e.capacityOverride.reason : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }

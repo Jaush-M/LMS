@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { enrollStudentAction } from "@/lib/actions/course-offering-action";
+import { Banner } from "@/components/ui/banner";
+import { AlertTriangle } from "lucide-react";
 
 type Student = { id: string; generatedIdentifier: string; name: string };
 
@@ -12,6 +14,18 @@ type Props = {
   capacity: number;
 };
 
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  borderRadius: 9,
+  border: "1px solid var(--line)",
+  background: "var(--surface)",
+  color: "var(--ink)",
+  fontSize: 13.5,
+  padding: "9px 12px",
+  outline: "none",
+  fontFamily: "inherit",
+};
+
 export function EnrollStudentForm({ courseOfferingId, students, currentCount, capacity }: Props) {
   const [state, action, pending] = useActionState(enrollStudentAction, null);
   const [selectedStudentId, setSelectedStudentId] = useState("");
@@ -20,65 +34,64 @@ export function EnrollStudentForm({ courseOfferingId, students, currentCount, ca
   const showOverridePrompt = state?.status === "capacity_exceeded";
 
   return (
-    <form action={action} className="space-y-5 max-w-lg">
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <input type="hidden" name="courseOfferingId" value={courseOfferingId} />
 
       {state?.status === "error" && (
-        <p role="alert" className="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+        <Banner variant="bad">
           {state.error}
-        </p>
+        </Banner>
       )}
 
-      {/* always carry studentId so the override re-submission has it */}
       <input type="hidden" name="studentId" value={selectedStudentId} />
 
       {showOverridePrompt && (
-        <div
-          role="alert"
-          aria-label="Capacity exceeded"
-          className="rounded border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 space-y-3"
-        >
-          <p>
-            This Course Offering is at capacity ({state.currentCount}/{state.capacity}). Provide an override reason to proceed.
-          </p>
-          <div className="space-y-1">
-            <label htmlFor="overrideReason" className="block text-sm font-medium">
-              Override reason
-            </label>
-            <textarea
-              id="overrideReason"
-              name="overrideReason"
-              rows={2}
-              required
-              className="w-full rounded border px-3 py-2 text-sm"
-            />
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, borderRadius: 12, border: "1px solid var(--warn)", background: "var(--warn-soft)", padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <AlertTriangle size={15} style={{ color: "var(--warn)", flexShrink: 0, marginTop: 2 }} />
+            <p style={{ fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.5 }}>
+              This Course Offering is at capacity ({state.currentCount}/{state.capacity}). Provide an override reason to proceed.
+            </p>
           </div>
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 disabled:opacity-50"
-          >
-            {pending ? "Confirming…" : "Confirm enrollment with override"}
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>Override reason</label>
+            <textarea name="overrideReason" rows={2} required style={{ ...inputStyle, resize: "vertical" }} />
+          </div>
+          <div>
+            <button
+              type="submit"
+              disabled={pending}
+              style={{
+                padding: "9px 20px",
+                borderRadius: 10,
+                background: "var(--warn)",
+                color: "#fff",
+                fontSize: 13.5,
+                fontWeight: 700,
+                border: "none",
+                cursor: pending ? "default" : "pointer",
+                opacity: pending ? 0.6 : 1,
+              }}
+            >
+              {pending ? "Confirming…" : "Confirm enrollment with override"}
+            </button>
+          </div>
         </div>
       )}
 
       {!showOverridePrompt && (
         <>
           {atCapacity && (
-            <p className="text-sm text-yellow-700 bg-yellow-50 rounded border border-yellow-200 px-3 py-2">
+            <Banner variant="warn" icon={<AlertTriangle size={14} />}>
               This offering is at capacity ({currentCount}/{capacity}). You can still proceed — a capacity override reason will be required.
-            </p>
+            </Banner>
           )}
 
-          <div className="space-y-1">
-            <label htmlFor="studentId" className="block text-sm font-medium">
-              Student
-            </label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>Student</label>
             <select
-              id="studentId"
               required
-              className="w-full rounded border px-3 py-2 text-sm"
+              style={inputStyle}
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
             >
@@ -91,13 +104,26 @@ export function EnrollStudentForm({ courseOfferingId, students, currentCount, ca
             </select>
           </div>
 
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {pending ? "Enrolling…" : "Enroll Student"}
-          </button>
+          <div>
+            <button
+              type="submit"
+              disabled={pending}
+              style={{
+                padding: "9px 22px",
+                borderRadius: 10,
+                background: "var(--primary-strong)",
+                color: "#fff",
+                fontSize: 13.5,
+                fontWeight: 700,
+                border: "none",
+                cursor: pending ? "default" : "pointer",
+                opacity: pending ? 0.6 : 1,
+                boxShadow: "0 4px 12px -4px oklch(0.5 0.15 162 / 0.35)",
+              }}
+            >
+              {pending ? "Enrolling…" : "Enroll Student"}
+            </button>
+          </div>
         </>
       )}
     </form>
