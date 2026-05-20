@@ -16,7 +16,7 @@ async function signIn(
 test.describe("Administrator account management", () => {
   test("Administrator activates an inactive Student account", async ({ page }) => {
     await signIn(page, "A000001@lms.edu.mv");
-    await page.goto("/administrator/accounts");
+    await page.goto("/admin/accounts");
 
     await expect(page.getByText("S000005@lms.edu.mv")).toBeVisible();
     await expect(page.getByRole("row", { name: /S000005/ })).toContainText("Inactive");
@@ -31,7 +31,7 @@ test.describe("Administrator account management", () => {
 
   test("Administrator disables an active Student account", async ({ page }) => {
     await signIn(page, "A000001@lms.edu.mv");
-    await page.goto("/administrator/accounts");
+    await page.goto("/admin/accounts");
 
     await expect(page.getByText("S000006@lms.edu.mv")).toBeVisible();
     await expect(
@@ -52,7 +52,7 @@ test.describe("Super Administrator system settings", () => {
     page,
   }) => {
     await signIn(page, "SA000001@lms.edu.mv");
-    await page.goto("/super-administrator/system-settings");
+    await page.goto("/admin/system-settings");
 
     await expect(page.getByRole("heading", { name: /System Settings/i })).toBeVisible();
 

@@ -6,12 +6,12 @@ const TEMP_PASSWORD = "TempPass123!";
 const ROLES = [
   {
     email: "SA000001@lms.edu.mv",
-    dashboard: /\/super-administrator\/dashboard/,
+    dashboard: /\/admin\/dashboard/,
     heading: /Super Administrator/i,
   },
   {
     email: "A000001@lms.edu.mv",
-    dashboard: /\/administrator\/dashboard/,
+    dashboard: /\/admin\/dashboard/,
     heading: /Administrator Dashboard/i,
   },
   {
@@ -57,7 +57,7 @@ test.describe("authentication — error cases", () => {
   test("unauthenticated request to protected route redirects to sign-in", async ({
     page,
   }) => {
-    await page.goto("/super-administrator/dashboard");
+    await page.goto("/admin/dashboard");
     await expect(page).toHaveURL(/\/sign-in/);
   });
 

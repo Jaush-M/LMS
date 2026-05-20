@@ -19,7 +19,7 @@ test.describe("role-based access control", () => {
     await signIn(page, "E000001@lms.edu.mv");
     await expect(page).toHaveURL(/\/educator\/dashboard/);
 
-    await page.goto("/administrator/dashboard");
+    await page.goto("/admin/dashboard");
     await expect(page).toHaveURL(/\/educator\/dashboard/);
   });
 
@@ -29,7 +29,7 @@ test.describe("role-based access control", () => {
     await signIn(page, "S000001@lms.edu.mv");
     await expect(page).toHaveURL(/\/student\/dashboard/);
 
-    await page.goto("/administrator/dashboard");
+    await page.goto("/admin/dashboard");
     await expect(page).toHaveURL(/\/student\/dashboard/);
   });
 });
@@ -37,10 +37,10 @@ test.describe("role-based access control", () => {
 test.describe("account creation — Super Administrator creates Administrator", () => {
   test("SA submits form and sees generated credentials", async ({ page }) => {
     await signIn(page, "SA000001@lms.edu.mv");
-    await expect(page).toHaveURL(/\/super-administrator\/dashboard/);
+    await expect(page).toHaveURL(/\/admin\/dashboard/);
 
     await page.getByRole("link", { name: "Create administrator" }).click();
-    await expect(page).toHaveURL(/\/super-administrator\/create-administrator/);
+    await expect(page).toHaveURL(/\/admin\/create-administrator/);
 
     await page.getByLabel("Full name").fill("New Administrator");
     await page.getByRole("button", { name: "Create administrator" }).click();
@@ -55,10 +55,10 @@ test.describe("account creation — Super Administrator creates Administrator", 
 test.describe("account creation — Administrator creates Student or Educator", () => {
   test("Administrator creates a Student account", async ({ page }) => {
     await signIn(page, "A000001@lms.edu.mv");
-    await expect(page).toHaveURL(/\/administrator\/dashboard/);
+    await expect(page).toHaveURL(/\/admin\/dashboard/);
 
     await page.getByRole("link", { name: "Create account" }).click();
-    await expect(page).toHaveURL(/\/administrator\/create-account/);
+    await expect(page).toHaveURL(/\/admin\/create-account/);
 
     await page.getByLabel("Full name").fill("New Student");
     await page.getByLabel("Role").selectOption("STUDENT");

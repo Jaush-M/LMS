@@ -20,12 +20,12 @@ async function signInAsEducator(page: Parameters<Parameters<typeof test>[1]>[0])
 
 // Navigate to the January 2025 offering's sessions page
 async function navigateToAdminSessions(page: Parameters<Parameters<typeof test>[1]>[0]) {
-  await page.goto("/administrator/course-offerings");
+  await page.goto("/admin/course-offerings");
   await page.getByRole("link", { name: "BSc CS — January 2025" }).click();
   const offeringUrl = page.url();
   const id = offeringUrl.split("/").at(-1)!;
-  await page.goto(`/administrator/course-offerings/${id}/sessions`);
-  await expect(page).toHaveURL(/\/administrator\/course-offerings\/.+\/sessions$/);
+  await page.goto(`/admin/course-offerings/${id}/sessions`);
+  await expect(page).toHaveURL(/\/admin\/course-offerings\/.+\/sessions$/);
 }
 
 // ── TC-006: Session scheduling ────────────────────────────────────────────────
@@ -46,7 +46,7 @@ test.describe("Class Session scheduling — TC-006", () => {
 
     await page.getByRole("button", { name: "Schedule Session" }).click();
 
-    await expect(page).toHaveURL(/\/administrator\/course-offerings\/.+\/sessions$/);
+    await expect(page).toHaveURL(/\/admin\/course-offerings\/.+\/sessions$/);
     await expect(page.getByText("Room B201")).toBeVisible();
   });
 

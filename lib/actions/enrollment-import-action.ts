@@ -88,7 +88,7 @@ export async function commitEnrollmentCsvImportAction(
       enrolledById: actor.id,
     });
 
-    revalidatePath("/administrator/enrollment-import");
+    revalidatePath("/admin/enrollment-import");
     return { result };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Enrollment CSV commit failed" };

@@ -25,20 +25,17 @@ async function requireActor(requiredRole: "ADMINISTRATOR" | "SUPER_ADMINISTRATOR
 export async function activateAccountAction(targetId: string): Promise<void> {
   const actor = await requireActor("ADMINISTRATOR");
   await activateAccount(actor.id, targetId);
-  revalidatePath("/administrator/accounts");
-  revalidatePath("/super-administrator/accounts");
+  revalidatePath("/admin/accounts");
 }
 
 export async function disableAccountAction(targetId: string): Promise<void> {
   const actor = await requireActor("ADMINISTRATOR");
   await disableAccount(actor.id, targetId);
-  revalidatePath("/administrator/accounts");
-  revalidatePath("/super-administrator/accounts");
+  revalidatePath("/admin/accounts");
 }
 
 export async function reactivateAccountAction(targetId: string): Promise<void> {
   const actor = await requireActor("ADMINISTRATOR");
   await reactivateAccount(actor.id, targetId);
-  revalidatePath("/administrator/accounts");
-  revalidatePath("/super-administrator/accounts");
+  revalidatePath("/admin/accounts");
 }

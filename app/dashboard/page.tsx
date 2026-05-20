@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 const roleRoutes = {
-  SUPER_ADMINISTRATOR: "/super-administrator/dashboard",
-  ADMINISTRATOR: "/administrator/dashboard",
+  SUPER_ADMINISTRATOR: "/admin/dashboard",
+  ADMINISTRATOR: "/admin/dashboard",
   EDUCATOR: "/educator/dashboard",
   STUDENT: "/student/dashboard",
 } as const;

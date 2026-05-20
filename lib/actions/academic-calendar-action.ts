@@ -41,7 +41,7 @@ export async function createInstitutionEventAction(
       finishAt: finishAt ? new Date(finishAt) : undefined,
     });
 
-    revalidatePath("/administrator/academic-calendar");
+    revalidatePath("/admin/academic-calendar");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
@@ -73,7 +73,7 @@ export async function createCourseOfferingEventAction(
       finishAt: finishAt ? new Date(finishAt) : undefined,
     });
 
-    revalidatePath("/administrator/academic-calendar");
+    revalidatePath("/admin/academic-calendar");
     return null;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "An error occurred" };
