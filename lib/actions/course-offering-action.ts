@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireAuthRedirect } from "@/lib/auth-guard";
-import { createCourseOfferingFromTemplate, archiveCourseOffering } from "@/lib/course-offering";
+import { createCourseOfferingFromTemplate, activateCourseOffering, cancelCourseOffering, archiveCourseOffering } from "@/lib/course-offering";
 import { enrollStudent } from "@/lib/enrollment";
 
 // ── createCourseOfferingAction ────────────────────────────────────────────────
@@ -89,6 +89,46 @@ export async function enrollStudentAction(
   } catch (error) {
     if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw error;
     return { status: "error", error: error instanceof Error ? error.message : "Enrollment failed" };
+  }
+}
+
+// ── activateCourseOfferingAction ──────────────────────────────────────────────
+
+export type ActivateCourseOfferingState = { error: string } | null;
+
+export async function activateCourseOfferingAction(
+  _prev: ActivateCourseOfferingState,
+  formData: FormData
+): Promise<ActivateCourseOfferingState> {
+  const { account } = await requireAuthRedirect({ minRole: "ADMINISTRATOR" });
+
+  try {
+    const courseOfferingId = formData.get("courseOfferingId") as string;
+    await activateCourseOffering({ courseOfferingId, activatedById: account.id });
+    redirect(`/admin/course-offerings/${courseOfferingId}`);
+  } catch (error) {
+    if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw error;
+    return { error: error instanceof Error ? error.message : "Activation failed" };
+  }
+}
+
+// ── cancelCourseOfferingAction ────────────────────────────────────────────────
+
+export type CancelCourseOfferingState = { error: string } | null;
+
+export async function cancelCourseOfferingAction(
+  _prev: CancelCourseOfferingState,
+  formData: FormData
+): Promise<CancelCourseOfferingState> {
+  const { account } = await requireAuthRedirect({ minRole: "ADMINISTRATOR" });
+
+  try {
+    const courseOfferingId = formData.get("courseOfferingId") as string;
+    await cancelCourseOffering({ courseOfferingId, cancelledById: account.id });
+    redirect(`/admin/course-offerings/${courseOfferingId}`);
+  } catch (error) {
+    if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw error;
+    return { error: error instanceof Error ? error.message : "Cancellation failed" };
   }
 }
 

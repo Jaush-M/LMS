@@ -4,6 +4,38 @@ import { redirect } from "next/navigation";
 import { requireAuthRedirect } from "@/lib/auth-guard";
 import { createClassSession } from "@/lib/class-sessions";
 
+export async function createClassSessionEducatorAction(_prev: unknown, formData: FormData) {
+  const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
+  const moduleOfferingId = formData.get("moduleOfferingId") as string;
+  const sessionTypeId = formData.get("sessionTypeId") as string;
+  const startAtRaw = formData.get("startAt") as string;
+  const finishAtRaw = formData.get("finishAt") as string;
+  const sessionLocation = (formData.get("sessionLocation") as string)?.trim() || undefined;
+
+  if (!startAtRaw || !finishAtRaw) return { error: "Start and finish times are required" };
+  if (!sessionTypeId) return { error: "Session type is required" };
+
+  const start = new Date(startAtRaw);
+  const finish = new Date(finishAtRaw);
+  if (finish <= start) return { error: "Finish time must be after start time" };
+
+  try {
+    await createClassSession({
+      moduleOfferingId,
+      sessionTypeId,
+      startAt: start,
+      finishAt: finish,
+      sessionLocation,
+      attendanceRequired: true,
+      createdById: account.id,
+    });
+  } catch (e) {
+    if ((e as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw e;
+    return { error: (e as Error).message };
+  }
+  redirect(`/educator/modules/${moduleOfferingId}/sessions`);
+}
+
 export async function createClassSessionAction(_prev: unknown, formData: FormData) {
   const { account } = await requireAuthRedirect({ minRole: "ADMINISTRATOR" });
   const moduleOfferingId = formData.get("moduleOfferingId") as string;

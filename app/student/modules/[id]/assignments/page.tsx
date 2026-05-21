@@ -2,11 +2,14 @@ import { requireAuthPage } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ExternalLink } from "lucide-react";
 import { listAssignments } from "@/lib/assignments";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty";
+import { SubmitAssignmentForm } from "./submit-form";
+import { ExtensionRequestForm } from "./extension-request-form";
+import { DeleteSubmissionForm } from "./delete-submission-form";
 
 function submissionChip(status: string) {
   if (status === "MARKED") return <Chip variant="ok" dot>Marked</Chip>;
@@ -34,8 +37,23 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
 
   const mySubmissions = await prisma.assignmentSubmission.findMany({
     where: { studentId: account.id, assignmentId: { in: assignments.map((a) => a.id) } },
+    include: { fileAsset: { select: { originalFilename: true, storageKey: true } } },
   });
   const submissionMap = new Map(mySubmissions.map((s) => [s.assignmentId, s]));
+
+  const myExtensionRequests = await prisma.deadlineExtensionRequest.findMany({
+    where: { requestedById: account.id, assignmentId: { in: assignments.map((a) => a.id) } },
+  });
+  const extensionRequestMap = new Map(myExtensionRequests.map((r) => [r.assignmentId, r]));
+
+  const latestExtensions = await prisma.assignmentDeadlineExtension.findMany({
+    where: { assignmentId: { in: assignments.map((a) => a.id) } },
+    orderBy: { createdAt: "desc" },
+  });
+  const extensionMap = new Map<string, Date>();
+  for (const ext of latestExtensions) {
+    if (!extensionMap.has(ext.assignmentId)) extensionMap.set(ext.assignmentId, ext.newDeadline);
+  }
 
   const myMarks = await prisma.componentMark.findMany({
     where: { studentId: account.id, status: "RELEASED", assessmentComponent: { moduleOfferingId: id } },
@@ -45,6 +63,8 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
   const myFinalGrade = await prisma.finalGrade.findUnique({
     where: { moduleOfferingId_studentId: { moduleOfferingId: id, studentId: account.id } },
   });
+
+  const now = new Date();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -66,15 +86,25 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {assignments.map((a) => {
             const sub = submissionMap.get(a.id);
-            const now = new Date();
-            const isOverdue = !sub && a.deadline < now;
+            const effectiveDeadline = extensionMap.get(a.id) ?? a.deadline;
+            const isBeforeDeadline = now <= effectiveDeadline;
+            const isMarked = sub?.status === "MARKED";
+            const isOverdue = !sub && !isBeforeDeadline;
+
+            // Can submit: no submission at all, OR has submission + before deadline (replace)
+            const canSubmit = !isMarked && (!sub || isBeforeDeadline);
+            const isReplacement = !!sub && !isMarked && isBeforeDeadline;
+            const hasExtensionRequest = extensionRequestMap.has(a.id);
+
             return (
               <Card key={a.id}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)" }}>{a.title}</div>
                     <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 3 }}>
-                      Due {a.deadline.toLocaleDateString("en", { weekday: "short", day: "numeric", month: "short" })} · Max {a.maximumMark} marks
+                      Due {effectiveDeadline.toLocaleDateString("en", { weekday: "short", day: "numeric", month: "short" })}
+                      {extensionMap.has(a.id) && <span style={{ marginLeft: 4, color: "var(--ok)" }}>· Extended</span>}
+                      {" · "}Max {a.maximumMark} marks
                     </div>
                     {a.body && (
                       <div
@@ -83,7 +113,52 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
                         dangerouslySetInnerHTML={{ __html: a.body }}
                       />
                     )}
+
+                    {sub && (
+                      <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <a
+                          href={`/api/files/${encodeURIComponent(sub.fileAsset.storageKey)}?preview=1`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "var(--ink-2)", textDecoration: "none" }}
+                        >
+                          <ExternalLink size={12} style={{ flexShrink: 0 }} />
+                          <span style={{ fontFamily: "monospace" }}>{sub.fileAsset.originalFilename}</span>
+                        </a>
+                        {!isMarked && (
+                          <DeleteSubmissionForm
+                            key={`del-${a.id}`}
+                            submissionId={sub.id}
+                            moduleOfferingId={id}
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    {canSubmit && (
+                      <SubmitAssignmentForm
+                        key={`sub-${a.id}`}
+                        assignmentId={a.id}
+                        moduleOfferingId={id}
+                        isReplacement={isReplacement}
+                      />
+                    )}
+
+                    {!isMarked && (
+                      <div style={{ marginTop: 8 }}>
+                        {hasExtensionRequest ? (
+                          <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>Extension requested</span>
+                        ) : (
+                          <ExtensionRequestForm
+                            key={`ext-${a.id}`}
+                            assignmentId={a.id}
+                            moduleOfferingId={id}
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
+
                   <div style={{ flexShrink: 0 }}>
                     {sub
                       ? submissionChip(sub.status)

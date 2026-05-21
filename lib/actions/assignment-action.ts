@@ -2,7 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { requireAuthRedirect } from "@/lib/auth-guard";
-import { createAssignment, publishAssignment, unpublishAssignment, extendDeadline } from "@/lib/assignments";
+import { createAssignment, publishAssignment, unpublishAssignment, extendDeadline, submitAssignment, deleteSubmission, requestDeadlineExtension } from "@/lib/assignments";
+import { uploadFile } from "@/lib/storage/upload-file";
+import { LocalDiskDriver } from "@/lib/storage/local-driver";
+import { env } from "@/lib/env";
+import { prisma } from "@/lib/prisma";
 
 export async function createAssignmentAction(_prev: unknown, formData: FormData) {
   const { account } = await requireAuthRedirect({ roles: ["EDUCATOR"] });
@@ -59,6 +63,63 @@ export async function unpublishAssignmentAction(_prev: unknown, formData: FormDa
     return { error: (e as Error).message };
   }
   redirect(`/educator/modules/${moduleOfferingId}/assignments`);
+}
+
+export async function submitAssignmentAction(_prev: unknown, formData: FormData) {
+  const { account } = await requireAuthRedirect({ roles: ["STUDENT"] });
+  const assignmentId = formData.get("assignmentId") as string;
+  const moduleOfferingId = formData.get("moduleOfferingId") as string;
+  const file = formData.get("file") as File | null;
+
+  if (!file || file.size === 0) return { error: "Please select a file" };
+
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const key = `submissions/${account.id}/${assignmentId}/${Date.now()}_${safeName}`;
+    const driver = new LocalDiskDriver(env.LOCAL_STORAGE_PATH, env.BETTER_AUTH_URL);
+    const asset = await uploadFile(
+      { buffer, key, originalFilename: file.name, mimeType: file.type || "application/octet-stream", sizeBytes: file.size, category: "SUBMISSION", uploadedById: account.id },
+      driver,
+      prisma
+    );
+    await submitAssignment({ assignmentId, studentId: account.id, fileAssetId: asset.id });
+  } catch (e) {
+    if ((e as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw e;
+    return { error: (e as Error).message };
+  }
+  redirect(`/student/modules/${moduleOfferingId}/assignments`);
+}
+
+export async function deleteSubmissionAction(_prev: unknown, formData: FormData) {
+  const { account } = await requireAuthRedirect({ roles: ["STUDENT"] });
+  const submissionId = formData.get("submissionId") as string;
+  const moduleOfferingId = formData.get("moduleOfferingId") as string;
+
+  try {
+    await deleteSubmission({ submissionId, studentId: account.id });
+  } catch (e) {
+    if ((e as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw e;
+    return { error: (e as Error).message };
+  }
+  redirect(`/student/modules/${moduleOfferingId}/assignments`);
+}
+
+export async function requestDeadlineExtensionAction(_prev: unknown, formData: FormData) {
+  const { account } = await requireAuthRedirect({ roles: ["STUDENT"] });
+  const assignmentId = formData.get("assignmentId") as string;
+  const moduleOfferingId = formData.get("moduleOfferingId") as string;
+  const reason = (formData.get("reason") as string)?.trim();
+
+  if (!reason) return { error: "Please provide a reason" };
+
+  try {
+    await requestDeadlineExtension({ assignmentId, requestedById: account.id, reason });
+  } catch (e) {
+    if ((e as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw e;
+    return { error: (e as Error).message };
+  }
+  redirect(`/student/modules/${moduleOfferingId}/assignments`);
 }
 
 export async function extendDeadlineAction(_prev: unknown, formData: FormData) {

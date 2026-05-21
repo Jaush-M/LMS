@@ -291,6 +291,32 @@ export async function unpublishModuleContent(input: UnpublishModuleContentInput)
   });
 }
 
+// ── addContentAttachment ──────────────────────────────────────────────────────
+
+export async function addContentAttachment(input: { contentItemId: string; addedById: string; fileAssetId: string }) {
+  const item = await prisma.moduleContent.findUniqueOrThrow({ where: { id: input.contentItemId } });
+  await assertSectionOwner(item.contentSectionId, input.addedById);
+
+  return prisma.contentAttachment.create({
+    data: { contentItemId: input.contentItemId, fileAssetId: input.fileAssetId },
+  });
+}
+
+// ── deleteContentAttachment ───────────────────────────────────────────────────
+
+export async function deleteContentAttachment(input: { attachmentId: string; deletedById: string }) {
+  const att = await prisma.contentAttachment.findUniqueOrThrow({
+    where: { id: input.attachmentId },
+    include: { contentItem: true },
+  });
+  await assertSectionOwner(att.contentItem.contentSectionId, input.deletedById);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.contentAttachment.delete({ where: { id: input.attachmentId } });
+    await tx.fileAsset.update({ where: { id: att.fileAssetId }, data: { status: "DELETED" } });
+  });
+}
+
 // ── listModuleContent ─────────────────────────────────────────────────────────
 
 export type ListModuleContentInput = {
@@ -344,7 +370,7 @@ export async function listModuleContent(input: ListModuleContentInput) {
       contentItems: {
         where: canSeeAll ? undefined : { status: "PUBLISHED" },
         orderBy: { sortOrder: "asc" },
-        include: { sharedLinks: true, attachments: true },
+        include: { sharedLinks: true, attachments: { include: { fileAsset: true } } },
       },
     },
   });

@@ -111,7 +111,7 @@ export default async function CourseOfferingsPage() {
                         </div>
                       </td>
                       <td style={{ padding: "12px 20px" }}>
-                        <Chip variant={o.status === "ACTIVE" ? "ok" : o.status === "ARCHIVED" ? "default" : "lav"} dot size="sm">
+                        <Chip variant={o.status === "ACTIVE" ? "ok" : o.status === "ARCHIVED" || o.status === "CANCELLED" ? "default" : "lav"} dot size="sm">
                           {o.status}
                         </Chip>
                       </td>

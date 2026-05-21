@@ -77,13 +77,16 @@ async function resolveStudentsWithEffectiveAccess(
 
 export async function createClassSession(input: CreateClassSessionInput): Promise<CreateClassSessionResult> {
   const creator = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.createdById } });
-  if (creator.role !== "ADMINISTRATOR" && creator.role !== "SUPER_ADMINISTRATOR") {
-    throw new Error("Only an Administrator can create a Class Session");
-  }
 
   const moduleOffering = await prisma.moduleOffering.findUniqueOrThrow({
     where: { id: input.moduleOfferingId },
   });
+
+  const isAdmin = creator.role === "ADMINISTRATOR" || creator.role === "SUPER_ADMINISTRATOR";
+  const isAssignedEducator = creator.role === "EDUCATOR" && moduleOffering.primaryEducatorId === creator.id;
+  if (!isAdmin && !isAssignedEducator) {
+    throw new Error("Permission denied: only the assigned educator or an administrator can schedule sessions");
+  }
 
   const session = await prisma.classSession.create({
     data: {

@@ -112,6 +112,7 @@ model UserAccount {
   createdAssignments              Assignment[]                @relation("CreatedAssignments")
   createdDeadlineExtensions       AssignmentDeadlineExtension[] @relation("CreatedDeadlineExtensions")
   assignmentSubmissions           AssignmentSubmission[]      @relation("StudentSubmissions")
+  deadlineExtensionRequests       DeadlineExtensionRequest[]  @relation("RequestedExtensions")
   studentAttendanceRecords        AttendanceRecord[]          @relation("StudentAttendanceRecords")
   submittedAttendanceRecords      AttendanceRecord[]          @relation("SubmittedAttendanceRecords")
   educatorAttendanceRecords       EducatorAttendanceRecord[]  @relation("EducatorAttendanceRecords")
@@ -353,6 +354,7 @@ model DefaultAssessmentComponent {
 enum OfferingStatus {
   PLANNED
   ACTIVE
+  CANCELLED
   ARCHIVED
 }
 
@@ -854,6 +856,7 @@ model Assignment {
   submissions         AssignmentSubmission[]
   assessmentComponent AssessmentComponent?
   deadlineExtensions  AssignmentDeadlineExtension[]
+  extensionRequests   DeadlineExtensionRequest[]
 }
 
 model AssignmentAttachment {
@@ -905,6 +908,16 @@ model AssignmentDeadlineExtension {
   createdById    String
   createdBy      UserAccount @relation("CreatedDeadlineExtensions", fields: [createdById], references: [id])
   createdAt      DateTime   @default(now())
+}
+
+model DeadlineExtensionRequest {
+  id            String      @id @default(cuid())
+  assignmentId  String
+  assignment    Assignment  @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  requestedById String
+  requestedBy   UserAccount @relation("RequestedExtensions", fields: [requestedById], references: [id])
+  reason        String
+  createdAt     DateTime    @default(now())
 }
 
 // ── Assessment Structure and Marking ──────────────────────────────────────────

@@ -146,6 +146,94 @@ export async function createCourseOfferingFromTemplate(params: CreateCourseOffer
   });
 }
 
+type ActivateCourseOfferingInput = {
+  courseOfferingId: string;
+  activatedById: string;
+};
+
+export async function activateCourseOffering(input: ActivateCourseOfferingInput): Promise<{ id: string; status: string }> {
+  const actor = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.activatedById } });
+  if (actor.role !== "ADMINISTRATOR" && actor.role !== "SUPER_ADMINISTRATOR") {
+    throw new Error("Only an Administrator can activate a Course Offering");
+  }
+
+  const offering = await prisma.courseOffering.findUniqueOrThrow({ where: { id: input.courseOfferingId } });
+
+  if (offering.status !== "PLANNED") {
+    throw new Error("Only a planned Course Offering can be activated");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await tx.moduleOffering.updateMany({
+      where: { courseOfferingId: input.courseOfferingId },
+      data: { status: "ACTIVE" },
+    });
+
+    const updated = await tx.courseOffering.update({
+      where: { id: input.courseOfferingId },
+      data: { status: "ACTIVE" },
+    });
+
+    await tx.auditLogEntry.create({
+      data: {
+        eventType: "OPERATIONAL",
+        action: "COURSE_OFFERING_ACTIVATED",
+        actorId: input.activatedById,
+        entityType: "CourseOffering",
+        entityId: input.courseOfferingId,
+        beforeJson: JSON.stringify({ status: "PLANNED" }),
+        afterJson: JSON.stringify({ status: "ACTIVE" }),
+      },
+    });
+
+    return { id: updated.id, status: updated.status };
+  });
+}
+
+type CancelCourseOfferingInput = {
+  courseOfferingId: string;
+  cancelledById: string;
+};
+
+export async function cancelCourseOffering(input: CancelCourseOfferingInput): Promise<{ id: string; status: string }> {
+  const actor = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.cancelledById } });
+  if (actor.role !== "ADMINISTRATOR" && actor.role !== "SUPER_ADMINISTRATOR") {
+    throw new Error("Only an Administrator can cancel a Course Offering");
+  }
+
+  const offering = await prisma.courseOffering.findUniqueOrThrow({ where: { id: input.courseOfferingId } });
+
+  if (offering.status !== "PLANNED") {
+    throw new Error("Only a planned Course Offering can be cancelled");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await tx.moduleOffering.updateMany({
+      where: { courseOfferingId: input.courseOfferingId },
+      data: { status: "CANCELLED" },
+    });
+
+    const updated = await tx.courseOffering.update({
+      where: { id: input.courseOfferingId },
+      data: { status: "CANCELLED" },
+    });
+
+    await tx.auditLogEntry.create({
+      data: {
+        eventType: "OPERATIONAL",
+        action: "COURSE_OFFERING_CANCELLED",
+        actorId: input.cancelledById,
+        entityType: "CourseOffering",
+        entityId: input.courseOfferingId,
+        beforeJson: JSON.stringify({ status: "PLANNED" }),
+        afterJson: JSON.stringify({ status: "CANCELLED" }),
+      },
+    });
+
+    return { id: updated.id, status: updated.status };
+  });
+}
+
 type ArchiveCourseOfferingInput = {
   courseOfferingId: string;
   archivedById: string;

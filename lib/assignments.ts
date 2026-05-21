@@ -446,6 +446,56 @@ export async function extendDeadline(input: ExtendDeadlineInput): Promise<Extend
   });
 }
 
+// ── deleteSubmission ──────────────────────────────────────────────────────────
+
+export async function deleteSubmission(input: { submissionId: string; studentId: string }) {
+  const sub = await prisma.assignmentSubmission.findUniqueOrThrow({ where: { id: input.submissionId } });
+  if (sub.studentId !== input.studentId) throw new Error("Access denied");
+  if (sub.status === "MARKED") throw new Error("Cannot delete a marked submission");
+
+  return prisma.$transaction(async (tx) => {
+    await tx.assignmentSubmission.delete({ where: { id: sub.id } });
+    await tx.fileAsset.update({ where: { id: sub.fileAssetId }, data: { status: "DELETED" } });
+  });
+}
+
+// ── requestDeadlineExtension ──────────────────────────────────────────────────
+
+export type RequestDeadlineExtensionInput = {
+  assignmentId: string;
+  requestedById: string;
+  reason: string;
+};
+
+export async function requestDeadlineExtension(input: RequestDeadlineExtensionInput) {
+  const student = await prisma.userAccount.findUniqueOrThrow({ where: { id: input.requestedById } });
+  if (student.role !== "STUDENT") {
+    throw new Error("Only students can request deadline extensions");
+  }
+
+  const assignment = await prisma.assignment.findUniqueOrThrow({
+    where: { id: input.assignmentId },
+    include: { moduleOffering: { select: { courseOfferingId: true } } },
+  });
+
+  if (assignment.status !== "PUBLISHED") {
+    throw new Error("Assignment is not published");
+  }
+
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { studentId: input.requestedById, courseOfferingId: assignment.moduleOffering.courseOfferingId, status: "ACTIVE" },
+  });
+  if (!enrollment) throw new Error("Access denied");
+
+  return prisma.deadlineExtensionRequest.create({
+    data: {
+      assignmentId: input.assignmentId,
+      requestedById: input.requestedById,
+      reason: input.reason,
+    },
+  });
+}
+
 // ── getEffectiveDeadline ──────────────────────────────────────────────────────
 
 export async function getEffectiveDeadline(assignmentId: string): Promise<Date> {

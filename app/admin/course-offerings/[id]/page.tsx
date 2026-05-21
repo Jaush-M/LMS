@@ -6,6 +6,7 @@ import { ChevronLeft, Users, ArrowRight } from "lucide-react";
 import { Chip } from "@/components/ui/chip";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmptyState } from "@/components/ui/empty";
+import { StatusActionsForm } from "./status-actions-form";
 
 export default async function CourseOfferingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,6 +40,7 @@ export default async function CourseOfferingDetailPage({ params }: { params: Pro
   const enrolledCount = offering.enrollments.length;
   const fillPct = Math.round((enrolledCount / offering.capacity) * 100);
   const atCapacity = enrolledCount >= offering.capacity;
+  const isFinished = new Date() >= offering.finishAt;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -56,7 +58,10 @@ export default async function CourseOfferingDetailPage({ params }: { params: Pro
             {offering.course.code} — {offering.course.name}
           </p>
         </div>
-        <Chip variant={offering.status === "ARCHIVED" ? "default" : "ok"} size="sm">{offering.status}</Chip>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+          <Chip variant={offering.status === "ACTIVE" ? "ok" : offering.status === "ARCHIVED" || offering.status === "CANCELLED" ? "default" : "lav"} size="sm">{offering.status}</Chip>
+          <StatusActionsForm courseOfferingId={id} status={offering.status} isFinished={isFinished} />
+        </div>
       </div>
 
       {/* Info grid */}

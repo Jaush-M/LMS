@@ -7,6 +7,7 @@ import { isAttendanceLocked } from "@/lib/attendance";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty";
+import { ScheduleSessionForm } from "./schedule-session-form";
 
 export default async function EducatorSessionsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,6 +18,11 @@ export default async function EducatorSessionsPage({ params }: { params: Promise
     include: { templateModule: { include: { module: true } } },
   });
   if (!mo) notFound();
+
+  const sessionTypes = await prisma.sessionType.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { name: "asc" },
+  });
 
   const classSessions = await prisma.classSession.findMany({
     where: { moduleOfferingId: id },
@@ -48,6 +54,11 @@ export default async function EducatorSessionsPage({ params }: { params: Promise
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>{mo.templateModule.module.name}</p>
       </div>
+
+      <Card>
+        <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 14 }}>Schedule a Session</div>
+        <ScheduleSessionForm moduleOfferingId={id} sessionTypes={sessionTypes} />
+      </Card>
 
       {classSessions.length === 0 ? (
         <EmptyState title="No sessions scheduled" body="Class sessions will appear here once added." />
