@@ -18,7 +18,7 @@ PGADMIN_PORT=$(grep -E '^PGADMIN_PORT=' .env | cut -d= -f2 | tr -d '"' | tr -d "
 
 echo "Services are starting:"
 echo "  App:     http://localhost:${APP_PORT}"
-echo "  pgAdmin: http://localhost:${PGADMIN_PORT}  (admin@lms.local / admin)"
+echo "  pgAdmin: http://localhost:${PGADMIN_PORT}  (admin@lms.edu.mv / admin)"
 echo ""
 echo "The app runs migrations and seeds demo data on first boot."
 echo "Follow progress with:  docker compose logs -f app"

@@ -2,7 +2,8 @@
 FROM oven/bun:1.3.11-alpine AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 # Stage 2: Build application
 FROM oven/bun:1.3.11-alpine AS builder

@@ -31,10 +31,10 @@ A college-grade web platform where students, educators, administrators, and supe
 Requires Docker. No other dependencies.
 
 ```bash
-./scripts/demo.sh
+docker compose up -d
 ```
 
-This copies `.env.example` → `.env` if one doesn't exist, builds the image, starts all services, applies all migrations, and runs the demo seed automatically.
+This builds the image, starts all services, applies all migrations, and runs the demo seed automatically. The first build takes 3+ minutes while bun downloads packages — subsequent builds are fast due to layer caching.
 
 | Service  | URL                          | Default credentials          |
 | -------- | ---------------------------- | ---------------------------- |
