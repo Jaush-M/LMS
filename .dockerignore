@@ -1,16 +1,38 @@
+# Deps — reinstalled during build
 node_modules
-npm-debug.log
-.git
-.gitignore
-README.md
+
+# Build outputs — rebuilt during build
+.next
+.next_dev
+
+# Never bake env files into the image
+.env
 .env.local
 .env.*.local
-.next
-.vercel
-build
-dist
+
+# Git
+.git
+
+# Dev/test artifacts
+test-results
+tests
+coverage
+*.tsbuildinfo
+
+# IDE & tooling config
+.vscode
+.claude
 .DS_Store
-*.pem
-.eslintcache
+
+# Docs not needed in image
+docs
+README.md
+CHANGELOG.md
+CONTEXT.md
+CONTRIBUTING.md
 AGENTS.md
 CLAUDE.md
+
+# Misc
+*.zip
+*.pdf

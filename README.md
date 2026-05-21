@@ -11,6 +11,7 @@ A college-grade web platform where students, educators, administrators, and supe
 ## Stack
 
 - **Framework** — Next.js 16 / React 19
+- **Runtime** — Bun 1.3
 - **Database** — PostgreSQL 17 via Prisma 7
 - **Auth** — Better Auth
 - **Styling** — Tailwind CSS 4
@@ -25,60 +26,84 @@ A college-grade web platform where students, educators, administrators, and supe
 | Educator            | Attendance, assignments, marking, module content, module group chat       |
 | Student             | Views materials, submits assignments, tracks attendance and final grades   |
 
-## Development
+## Demo (Docker)
 
-### Docker (recommended)
+Requires Docker. No other dependencies.
 
 ```bash
-docker compose -f docker-compose.dev.yml up --watch
+./scripts/demo.sh
 ```
 
-Starts the app on `http://localhost:3000`, PostgreSQL on `5432`, and pgAdmin on `http://localhost:5050`.
+This copies `.env.example` → `.env` if one doesn't exist, builds the image, starts all services, applies all migrations, and runs the demo seed automatically.
 
-### Local
+| Service  | URL                          | Default credentials          |
+| -------- | ---------------------------- | ---------------------------- |
+| App      | http://localhost:3000        | see accounts table below     |
+| pgAdmin  | http://localhost:5050        | admin@lms.edu.mv / admin     |
+
+To change ports, edit `APP_PORT`, `POSTGRES_PORT`, or `PGADMIN_PORT` in `.env`. `BETTER_AUTH_URL` is derived from `APP_PORT` automatically.
+
+```bash
+docker compose logs -f app   # watch migrations + seed progress
+docker compose down -v       # tear down and wipe data
+```
+
+## Local development
 
 1. Start a PostgreSQL instance and set `DATABASE_URL` in `.env`.
-2. Install dependencies and run migrations:
+2. Install dependencies, run migrations, and seed:
 
 ```bash
 bun install
 bun run db:migrate
-bun run db:seed
+bun run db:seed:demo
 bun run dev
 ```
 
-## Seeded accounts
+## Demo accounts
 
-All seeded accounts use the password `Password@123`.
+All accounts use the password `Password@123`. Emails are lowercase.
 
-| Role                | Institutional email     | Status   | Notes                              |
-| ------------------- | ----------------------- | -------- | ---------------------------------- |
-| Super Administrator | SA000001@lms.edu.mv     | Active   |                                    |
-| Administrator       | A000001@lms.edu.mv      | Active   |                                    |
-| Educator            | E000001@lms.edu.mv      | Active   |                                    |
-| Student             | S000001@lms.edu.mv      | Active   | Enrolled in January 2025 offering  |
-| Student             | S000002@lms.edu.mv      | Inactive | Must change password on first sign-in |
-| Student             | S000003@lms.edu.mv      | Disabled | Cannot sign in                     |
-| Student             | S000004@lms.edu.mv      | Active   | Must change password on first sign-in |
-| Student             | S000005@lms.edu.mv      | Inactive | Must change password on first sign-in |
-| Student             | S000006@lms.edu.mv      | Active   | Enrolled in January 2025 offering  |
-| Student             | S000007@lms.edu.mv      | Active   | Enrollment test account            |
+| Role                | Email                   |
+| ------------------- | ----------------------- |
+| Super Administrator | sa000001@lms.edu.mv     |
+| Administrator       | a000001@lms.edu.mv      |
+| Administrator       | a000002@lms.edu.mv      |
+| Educator            | e000001@lms.edu.mv      |
+| Educator            | e000002@lms.edu.mv      |
+| Student             | s000001@lms.edu.mv      |
+| Student             | s000002@lms.edu.mv      |
+| *(+ 20 more)*       | s000003–s000022         |
+
+Three course offerings are seeded:
+
+| Offering                                  | Students | Modules | Status                        |
+| ----------------------------------------- | -------- | ------- | ----------------------------- |
+| BSc Computer Science — January 2026       | 10       | 6       | Active                        |
+| BSc Information Technology — Sep 2025     | 7        | 4       | Active, final grades released |
+| Diploma Business Administration — May 2026| 5        | 3       | Active, just started          |
 
 ## Scripts
 
-| Command              | Description                          |
-| -------------------- | ------------------------------------ |
-| `bun run dev`        | Start development server             |
-| `bun run build`      | Production build                     |
-| `bun run lint`       | ESLint                               |
-| `bun run test`       | Vitest unit tests                    |
-| `bun run test:e2e`   | Playwright end-to-end tests          |
-| `bun run db:migrate` | Run pending Prisma migrations        |
-| `bun run db:seed`    | Seed the database                    |
-| `bun run db:reset`   | Reset and re-seed the database       |
+| Command                  | Description                                  |
+| ------------------------ | -------------------------------------------- |
+| `bun run dev`            | Start development server                     |
+| `bun run build`          | Production build                             |
+| `bun run lint`           | ESLint                                       |
+| `bun run test`           | Vitest unit tests                            |
+| `bun run test:e2e`       | Playwright end-to-end tests                  |
+| `bun run db:migrate`     | Run pending Prisma migrations (dev)          |
+| `bun run db:seed`        | Seed minimal data                            |
+| `bun run db:seed:demo`   | Seed full demo dataset                       |
+| `bun run db:reset`       | Reset and re-seed (minimal)                  |
+| `bun run db:reset:demo`  | Reset and re-seed (demo)                     |
 
 ## Production
 
+App only. Set `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `NEXT_PUBLIC_BETTER_AUTH_URL` in the environment before running.
+
 ```bash
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
+
+Migrations are applied automatically on startup.
