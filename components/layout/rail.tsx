@@ -60,15 +60,17 @@ function getNavItems(role: UserRole): NavItem[] {
 
 interface RailProps {
   role: UserRole;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function Rail({ role }: RailProps) {
+export function Rail({ role, isOpen, onClose }: RailProps) {
   const pathname = usePathname();
 
   const navItems = getNavItems(role);
 
   return (
-    <aside className="rail">
+    <aside className={cn("rail", isOpen && "rail--open")}>
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-2.5 pb-[22px]">
         <div

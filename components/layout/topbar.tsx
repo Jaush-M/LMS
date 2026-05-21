@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, HelpCircle, LogOut } from "lucide-react";
+import { Bell, HelpCircle, LogOut, Menu } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { DarkModeToggle } from "@/components/ui/dark-mode-toggle";
 import { authClient } from "@/lib/auth-client";
@@ -61,9 +61,10 @@ interface TopbarProps {
   userName: string;
   userRole: UserRole;
   userEmail?: string;
+  onMenuToggle?: () => void;
 }
 
-export function Topbar({ userName, userRole, userEmail }: TopbarProps) {
+export function Topbar({ userName, userRole, userEmail, onMenuToggle }: TopbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const title = getTitle(pathname);
@@ -87,6 +88,15 @@ export function Topbar({ userName, userRole, userEmail }: TopbarProps) {
 
   return (
     <header className="topbar">
+      {onMenuToggle && (
+        <button
+          onClick={onMenuToggle}
+          className="lg:hidden w-9 h-9 rounded-xl grid place-items-center border border-line bg-surface hover:bg-surface-2 text-ink-2 transition-colors flex-shrink-0"
+          aria-label="Toggle navigation"
+        >
+          <Menu size={18} />
+        </button>
+      )}
       <div
         className="font-bold text-[18px] tracking-[-0.02em] mr-auto"
         style={{ fontFamily: "var(--font-display)" }}
@@ -123,7 +133,7 @@ export function Topbar({ userName, userRole, userEmail }: TopbarProps) {
             tone={getAvatarTone(userRole)}
             size="md"
           />
-          <div className="leading-tight text-[12.5px]">
+          <div className="leading-tight text-[12.5px] hidden sm:block">
             <span className="block font-bold text-[13px] text-ink whitespace-nowrap">
               {userName}
             </span>
